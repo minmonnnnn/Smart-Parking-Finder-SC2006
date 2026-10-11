@@ -1,0 +1,25 @@
+.sp-progress {
+  width: 100%;
+  height: 6px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--color-track);
+}
+
+.sp-progress__fill {
+  height: 100%;
+  border-radius: inherit;
+  transition: width 200ms ease;
+}
+
+.sp-progress__fill--success {
+  background: var(--color-success);
+}
+
+.sp-progress__fill--warning {
+  background: var(--color-warning);
+}
+
+.sp-progress__fill--danger {
+  background: var(--color-danger);
+}

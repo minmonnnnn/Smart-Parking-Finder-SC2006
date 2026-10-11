@@ -1,5 +1,5 @@
 import { Router, type Request, type Response } from 'express';
-import { getDrivingRoute, getWalkingRoute } from './routing.service.ts';
+import { getDrivingRoute, getWalkingRoute } from './routing.service.js';
 
 const router: Router = Router();
 

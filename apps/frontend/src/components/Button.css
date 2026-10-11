@@ -1,0 +1,66 @@
+.sp-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  border: 0;
+  border-radius: var(--radius-md);
+  font-family: var(--font-family);
+  font-weight: var(--font-weight-bold);
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.sp-button--md {
+  min-height: 48px;
+  padding: 0 var(--space-5);
+  font-size: var(--font-size-lg);
+}
+
+.sp-button--sm {
+  min-height: 32px;
+  padding: 0 var(--space-3);
+  font-size: var(--font-size-sm);
+  border-radius: var(--radius-sm);
+}
+
+.sp-button--full {
+  width: 100%;
+}
+
+.sp-button--primary {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.sp-button--primary:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.sp-button--secondary {
+  background: var(--color-secondary);
+  color: var(--color-on-secondary);
+}
+
+.sp-button--secondary:hover:not(:disabled) {
+  background: var(--color-secondary-hover);
+}
+
+.sp-button--ghost {
+  background: transparent;
+  color: var(--color-secondary);
+}
+
+.sp-button:focus-visible {
+  outline: 2px solid var(--color-secondary);
+  outline-offset: 2px;
+}
+
+.sp-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.sp-button__icon {
+  display: inline-flex;
+}

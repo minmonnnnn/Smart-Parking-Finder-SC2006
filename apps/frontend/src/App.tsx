@@ -1,122 +1,132 @@
 import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
+import { AuthProvider, useAuth } from './features/auth/AuthContext'
+import SearchPage from './features/search/SearchPage'
+import { SignInPage } from './pages/SignInPage'
+import { SignUpPage } from './pages/SignUpPage'
+import { ProfilePage } from './pages/ProfilePage'
+import { FavouritesPage } from './pages/FavouritesPage'
+import { NavigationPage } from './pages/NavigationPage'
 import './App.css'
 
-function App() {
-  const [count, setCount] = useState(0)
+type Page = 'sign-in' | 'sign-up' | 'search' | 'profile' | 'favourites' | 'navigation'
+
+function AppShell() {
+  const { session, logout } = useAuth()
+  const [page, setPage] = useState<Page>('sign-in')
+  const [handoff, setHandoff] = useState('')
+
+  const activePage: Page = session
+    ? page === 'search' || page === 'favourites' || page === 'navigation'
+      ? page
+      : 'profile'
+    : page === 'sign-up'
+      ? 'sign-up'
+      : 'sign-in'
+
+  function navigate(next: Page) {
+    setHandoff('')
+    setPage(next)
+  }
+
+  const content = (() => {
+    switch (activePage) {
+      case 'sign-in':
+        return (
+          <SignInPage
+            onSignedIn={() => navigate('profile')}
+            onSwitchMode={() => navigate('sign-up')}
+          />
+        )
+
+      case 'sign-up':
+        return <SignUpPage onSwitchMode={() => navigate('sign-in')} />
+
+      case 'search':
+        return <SearchPage />
+
+      case 'profile':
+        return <ProfilePage onAccountDeleted={() => navigate('sign-in')} />
+
+      case 'favourites':
+        return (
+          <FavouritesPage
+            onSelect={(favourite) =>
+              setHandoff(
+                `Selected ${favourite.locationName} (${favourite.address}).`,
+              )
+            }
+            onSearch={() => navigate('search')}
+          />
+        )
+
+      case 'navigation':
+        return <NavigationPage onBack={() => navigate('search')} />
+    }
+  })()
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div className="app-shell">
+      {session && (
+        <nav className="app-navigation" aria-label="Account navigation">
+          <button
+            type="button"
+            aria-current={activePage === 'search' ? 'page' : undefined}
+            onClick={() => navigate('search')}
+          >
+            Search
+          </button>
 
-      <div className="ticks"></div>
+          <button
+            type="button"
+            aria-current={activePage === 'profile' ? 'page' : undefined}
+            onClick={() => navigate('profile')}
+          >
+            Profile
+          </button>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+          <button
+            type="button"
+            aria-current={activePage === 'favourites' ? 'page' : undefined}
+            onClick={() => navigate('favourites')}
+          >
+            Favourites
+          </button>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+          <button
+            type="button"
+            aria-current={activePage === 'navigation' ? 'page' : undefined}
+            onClick={() => navigate('navigation')}
+          >
+            Navigation
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              logout()
+              navigate('sign-in')
+            }}
+          >
+            Log out
+          </button>
+        </nav>
+      )}
+
+      {session && handoff && (
+        <p className="app-handoff" role="status">
+          {handoff}
+        </p>
+      )}
+
+      {content}
+    </div>
   )
 }
 
-export default App
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppShell />
+    </AuthProvider>
+  )
+}

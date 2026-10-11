@@ -7,7 +7,7 @@
  * scoring engine can call them directly without HTTP overhead (per API_CONTRACT.md).
  */
 
-import type { DrivingRoute, WalkingRoute, TrafficStatus } from './types.ts';
+import type { DrivingRoute, WalkingRoute, TrafficStatus } from './types.js';
 
 // Haversine formula to compute great-circle distance in kilometers
 export function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {

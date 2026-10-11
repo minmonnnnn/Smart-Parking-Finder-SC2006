@@ -1,0 +1,13 @@
+apps/frontend/src/features/search/ @minmonnnnn
+apps/backend/src/modules/search/ @minmonnnnn
+apps/frontend/src/features/auth/ @Teik-Fei
+apps/backend/src/modules/auth/ @Teik-Fei
+apps/backend/src/modules/favourites/ @Teik-Fei
+apps/backend/src/modules/availability/ @xi7869
+apps/backend/src/modules/routing/ @pandorie
+apps/backend/src/modules/weather/ @moufooza
+apps/backend/src/modules/carparks/ @moufooza
+apps/backend/src/modules/recommendation/ @nhjr2000
+apps/backend/src/lib/errors/ @nhjr2000
+packages/shared-types/ @minmonnnnn @Teik-Fei @xi7869 @pandorie @moufooza @nhjr2000
+docs/API_CONTRACT.md @minmonnnnn @Teik-Fei @xi7869 @pandorie @moufooza @nhjr2000

@@ -1,0 +1,29 @@
+.sp-card {
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  color: var(--color-text-primary);
+}
+
+.sp-card--pad-none {
+  padding: 0;
+}
+
+.sp-card--pad-sm {
+  padding: var(--space-3);
+}
+
+.sp-card--pad-md {
+  padding: var(--space-4);
+}
+
+/* Small uppercase caption, e.g. "AVAILABLE" or "EV CHARGING" */
+.sp-label {
+  display: block;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}

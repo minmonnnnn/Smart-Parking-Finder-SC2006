@@ -19,7 +19,7 @@ router.get('/driving', async (req: Request, res: Response) => {
 
     if (isNaN(oLat) || isNaN(oLng) || isNaN(dLat) || isNaN(dLng)) {
       return res.status(400).json({
-        error: 'INVALID_QUERY_PARAMS',
+        error: 'VALIDATION_ERROR',
         message: 'Query parameters originLat, originLng, destLat, and destLng must be valid numbers.',
       });
     }
@@ -51,7 +51,7 @@ router.get('/walking', async (req: Request, res: Response) => {
 
     if (isNaN(oLat) || isNaN(oLng) || isNaN(dLat) || isNaN(dLng)) {
       return res.status(400).json({
-        error: 'INVALID_QUERY_PARAMS',
+        error: 'VALIDATION_ERROR',
         message: 'Query parameters originLat, originLng, destLat, and destLng must be valid numbers.',
       });
     }

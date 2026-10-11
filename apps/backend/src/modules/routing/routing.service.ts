@@ -7,7 +7,7 @@
  * scoring engine can call them directly without HTTP overhead (per API_CONTRACT.md).
  */
 
-import type { DrivingRoute, WalkingRoute, TrafficStatus } from './types.js';
+import type { DrivingRoute, WalkingRoute, TrafficStatus } from '@smart-parking/shared-types';
 
 // Haversine formula to compute great-circle distance in kilometers
 export function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -47,7 +47,10 @@ export async function getDrivingRoute(
   destLat: number,
   destLng: number
 ): Promise<DrivingRoute> {
-  const apiKey = process.env.GOOGLE_MAPS_API_KEY || 'AIzaSyCAUS68gz8Fg2Nsb6O1VeDUZcqwjnNChLQ';
+  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+  if (!apiKey) {
+    throw new Error('GOOGLE_MAPS_API_KEY is not set');
+  }
 
   try {
     const response = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
@@ -142,7 +145,10 @@ export async function getWalkingRoute(
   destLat: number,
   destLng: number
 ): Promise<WalkingRoute> {
-  const apiKey = process.env.GOOGLE_MAPS_API_KEY || 'AIzaSyCAUS68gz8Fg2Nsb6O1VeDUZcqwjnNChLQ';
+  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+  if (!apiKey) {
+    throw new Error('GOOGLE_MAPS_API_KEY is not set');
+  }
 
   try {
     const response = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {

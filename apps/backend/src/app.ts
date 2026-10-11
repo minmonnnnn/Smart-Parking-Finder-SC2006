@@ -17,9 +17,6 @@ export function createApp(dependencies: AppDependencies): Express {
   app.get('/health', (_request, response) => {
     response.json({ ok: true })
   })
-  app.get('/api/health', (_request, response) => {
-    response.json({ ok: true })
-  })
 
   if (dependencies.auth) app.use('/api/auth', dependencies.auth)
   if (dependencies.users) app.use('/api/users', dependencies.users)

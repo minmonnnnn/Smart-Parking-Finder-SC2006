@@ -1,5 +1,5 @@
 import { createRootRoute, createRoute, createRouter, Outlet } from '@tanstack/react-router';
-import { NavigationPage } from './NavigationPage';
+import { NavigationPage } from './pages/NavigationPage';
 
 const rootRoute = createRootRoute({
   component: () => (

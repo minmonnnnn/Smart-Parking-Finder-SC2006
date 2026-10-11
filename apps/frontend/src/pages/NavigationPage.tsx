@@ -147,6 +147,9 @@ export function NavigationPage({ onBack }: NavigationPageProps) {
   const originMarkerRef = useRef<google.maps.Marker | null>(null);
   const carparkMarkerRef = useRef<google.maps.Marker | null>(null);
   const destMarkerRef = useRef<google.maps.Marker | null>(null);
+  const drivingPolylineRef = useRef<google.maps.Polyline | null>(null);
+  const walkingPolylineRef = useRef<google.maps.Polyline | null>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
   const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
 

@@ -77,14 +77,20 @@ Resolves a chosen suggestion to coordinates.
 
 ### `GET /api/carparks/nearby`
 **Orchestrator endpoint.** Calls Moufooza's carpark static data, Xi Fei's real-time availability, Xavier's driving-time module, and Nigel's recommendation engine, then returns the ranked list. Build this against mocks of each dependency first; wire in real calls as each module ships.
-- **Query params:** `destinationLat, destinationLng, originLat?, originLng?, vehicleType?, filters?` (see Xi Fei's filter spec below)
-- **Response 200:** `RankedCarpark[]` — each item: `{ carpark: Carpark; distanceMeters: number; drivingEtaMinutes: number; walkingEtaMinutes: number; availability: AvailabilityInfo; recommendationScore: number }`
-- **Errors:** `DESTINATION_NOT_FOUND`, `NO_CARPARKS_FOUND`, `EXTERNAL_SERVICE_UNAVAILABLE` (partial — indicate which sub-service failed and return partial results, per FR43/UC-01.EX.3)
+- **Query params:** `NearbyCarparksQuery` — `destinationLat, destinationLng, originLat?, originLng?, vehicleType?, sort?` plus the filter fields below as flat params (e.g. `&evChargingOnly=true&maxCost=3`)
+  - `sort`: `distance` (default, nearest first per FR9) or `recommended` (highest `recommendationScore` first)
+- **Response 200:** `NearbyCarparksResponse` — `{ carparks: RankedCarpark[]; degradedServices: ("availability" | "routing" | "weather" | "historical")[] }`
+  - each `RankedCarpark`: `{ carpark: Carpark; distanceMeters: number; drivingEtaMinutes: number | null; walkingEtaMinutes: number; availability: AvailabilityInfo; recommendationScore: number }`
+  - `drivingEtaMinutes` is `null` when no origin is given or routing failed
+- **Partial data (FR43, UC-01.EX.3):** if a sub-service fails, still return **200** with the results computed from fallbacks and list the failed service in `degradedServices`; the UI shows a banner naming the missing information
+- **Errors:** `VALIDATION_ERROR` (missing/invalid coordinates), `NO_CARPARKS_FOUND` (404), `EXTERNAL_SERVICE_UNAVAILABLE` (503, only when no results can be produced at all, e.g. static carpark data unavailable)
 - **FR:** FR8–FR10, FR44–FR49 (via Nigel's engine), UC-01
 
 ### `GET /api/carparks/:carParkNo`
 Static + current details for one carpark, used by the details page.
-- **Response 200:** `CarparkDetails` — carpark static fields + current `AvailabilityInfo`
+- **Response 200:** `CarparkDetails` — `{ carpark: Carpark; availability: AvailabilityInfo }`
+- Distance and driving time are trip-specific, so the details page takes them from the `RankedCarpark` it was opened from
+- **Errors:** `NOT_FOUND` (unknown `carParkNo`)
 - **FR:** FR10
 
 ---
@@ -98,7 +104,7 @@ Static + current details for one carpark, used by the details page.
 Availability is refreshed by a background job (poll data.gov.sg/LTA) every 1 minute per FR14 — implement as a scheduled task, cache results (see `DB_SCHEMA.md` → `carpark_availability_cache`).
 
 ### Filter query params (consumed by `GET /api/carparks/nearby`)
-`filters` object: `{ evChargingOnly?: boolean; maxCost?: number; minAvailability?: "High" | "Moderate" | "Low" }`. Multiple filters combine with AND logic. Empty/absent object = unfiltered.
+`CarparkFilters`: `{ evChargingOnly?: boolean; shelteredOnly?: boolean; maxCost?: number; minAvailability?: "High" | "Moderate" | "Low" }`, sent as flat query params. Multiple filters combine with AND logic. Empty/absent object = unfiltered.
 - **FR:** FR16–FR20
 
 ### `POST /api/alerts`
@@ -161,3 +167,4 @@ Record changes here as they happen, so everyone can see what shifted since they 
 |---|---|---|---|
 | _(repo bootstrap date)_ | Initial contract drafted from SRS | Min | Whole team |
 | 2026-10-02 | Added ApiError/ApiErrorCode to shared-types; added ACCOUNT_ALREADY_EXISTS, FAVOURITE_ALREADY_EXISTS | Nigel | Pending |
+| 2026-10-02 | Added `destination.ts` / `carpark.ts` shared types. `GET /api/carparks/nearby`: response wrapped in `NearbyCarparksResponse` with `degradedServices` for partial data, `drivingEtaMinutes` nullable, new `sort` param (default `distance`, FR9), filters sent as flat params, added `shelteredOnly` filter. `CarparkDetails` shape defined. | Min | _pending: Xi Fei, Xavier, Nigel, Moufooza_ |

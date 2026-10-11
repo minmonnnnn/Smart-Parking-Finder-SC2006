@@ -147,12 +147,13 @@ export function NavigationPage({ onBack }: NavigationPageProps) {
   const originMarkerRef = useRef<google.maps.Marker | null>(null);
   const carparkMarkerRef = useRef<google.maps.Marker | null>(null);
   const destMarkerRef = useRef<google.maps.Marker | null>(null);
-  const drivingPolylineRef = useRef<google.maps.Polyline | null>(null);
-  const walkingPolylineRef = useRef<google.maps.Polyline | null>(null);
-  const searchContainerRef = useRef<HTMLDivElement>(null);
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
 
   const [mapLoaded, setMapLoaded] = useState(false);
-  const [mapError, setMapError] = useState<string | null>(null);
+  const [mapError, setMapError] = useState<string | null>(
+    apiKey ? null : 'VITE_GOOGLE_MAPS_API_KEY is not configured in .env'
+  );
   const [originLocation, setOriginLocation] = useState(SAMPLE_ORIGIN);
   const [carparkLocation, setCarparkLocation] = useState(DEFAULT_CARPARK);
   const [destinationLocation, setDestinationLocation] = useState(DEFAULT_DESTINATION);
@@ -209,8 +210,6 @@ export function NavigationPage({ onBack }: NavigationPageProps) {
 
   const currentDriving = drivingRoutes[activeRouteIndex] || drivingRoutes[0];
   const totalDurationMinutes = (currentDriving?.durationMinutes || 0) + (walkingInfo?.durationMinutes || 0);
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
-  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
 
   // 1. Auto-acquire live GPS position on mount so Pin A starts as current location
   useEffect(() => {
@@ -244,13 +243,12 @@ export function NavigationPage({ onBack }: NavigationPageProps) {
 
   // 2. Initialize Google Maps
   useEffect(() => {
-    if (window.google?.maps) {
-      initMap();
+    if (!apiKey) {
       return;
     }
 
-    if (!apiKey) {
-      setMapError('VITE_GOOGLE_MAPS_API_KEY is not configured in .env');
+    if (window.google?.maps) {
+      initMap();
       return;
     }
 

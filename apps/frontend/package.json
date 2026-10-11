@@ -14,6 +14,7 @@
   "dependencies": {
     "@react-google-maps/api": "^2.20.8",
     "@smart-parking/shared-types": "workspace:*",
+    "@tanstack/react-router": "^1.170.40",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
@@ -22,6 +23,7 @@
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.7",
+    "@types/google.maps": "^3.66.4",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",

@@ -1,0 +1,610 @@
+/* Team SRS colour palette (Section 7 of Playbook) */
+:root {
+  --color-primary: #FFC768;
+  --color-secondary: #2563EB;
+  --color-success: #10B981;
+  --color-danger: #EF4444;
+  --color-text-main: #111827;
+  --color-text-muted: #4B5563;
+  --color-bg-card: #FFFFFF;
+}
+
+/* Outer phone shell resembling the mobile mockup */
+.phoneFrame {
+  width: 380px;
+  max-width: 100%;
+  height: 760px;
+  max-height: 96vh;
+  margin: 12px auto;
+  /* border-radius: 40px; */
+  overflow: hidden;
+  position: relative;
+  /* box-shadow: 0 20px 48px rgba(0, 0, 0, 0.2), 0 0 0 10px #1E293B; */
+  background: #E5E7EB;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  box-sizing: border-box;
+}
+
+/* 9:30 Status bar at the top */
+.statusBar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 38px;
+  z-index: 25;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 24px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #111827;
+  pointer-events: none;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.8), transparent);
+}
+
+.statusIcons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+/* Floating top actions row (Hamburger + 3 dots) */
+.topHeaderRow {
+  position: absolute;
+  top: 36px;
+  left: 16px;
+  right: 16px;
+  z-index: 20;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.iconButton {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: #1F2937;
+  transition: transform 0.1s, background 0.15s;
+}
+
+.iconButton:hover {
+  background: #FFFFFF;
+  transform: scale(1.05);
+}
+
+/* Floating Search and Target Selection Container */
+.searchCardContainer {
+  position: absolute;
+  top: 80px;
+  left: 16px;
+  right: 16px;
+  z-index: 22;
+}
+
+.targetTabs {
+  display: flex;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  padding: 3px;
+  border-radius: 20px;
+  margin-bottom: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.targetTab {
+  flex: 1;
+  padding: 6px 6px;
+  border-radius: 16px;
+  border: none;
+  background: transparent;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #6B7280;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.targetTabActive {
+  background: var(--color-secondary);
+  color: #FFFFFF;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
+}
+
+/* Floating Search Capsule on the map */
+.searchCapsule {
+  background: #FFFFFF;
+  border-radius: 28px;
+  padding: 10px 16px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.14);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.searchIcon {
+  font-size: 16px;
+  color: #9CA3AF;
+}
+
+.searchInput {
+  border: none;
+  outline: none;
+  flex: 1;
+  font-size: 14px;
+  color: #111827;
+  background: transparent;
+}
+
+.searchInput::placeholder {
+  color: #9CA3AF;
+}
+
+.filterIcon {
+  font-size: 16px;
+  color: #6B7280;
+  cursor: pointer;
+}
+
+/* Full-bleed Google Maps canvas */
+.mapContainer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+/* Map Loading / Fallback Banner */
+.mapLoading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #F3F4F6;
+  color: #4B5563;
+  z-index: 2;
+  font-size: 14px;
+  gap: 8px;
+}
+
+/* Floating Navigation Bottom Sheet (Xavier's Scope) */
+.bottomSheet {
+  position: absolute;
+  bottom: 66px;
+  left: 12px;
+  right: 12px;
+  z-index: 20;
+  background: #FFFFFF;
+  border-radius: 20px;
+  padding: 8px 16px 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  text-align: left;
+  transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sheetCollapsed {
+  padding-bottom: 10px;
+}
+
+.sheetHandle {
+  width: 36px;
+  height: 4px;
+  background: #D1D5DB;
+  border-radius: 2px;
+  margin: 0 auto 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.sheetHandle:hover {
+  background: #9CA3AF;
+}
+
+.sheetHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.sheetHeaderExpanded {
+  margin-bottom: 8px;
+}
+
+.sheetToggleChevron {
+  font-size: 11px;
+  color: #9CA3AF;
+  margin-left: 8px;
+  transition: transform 0.2s;
+}
+
+.totalEta {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--color-secondary);
+}
+
+.trafficBadge {
+  padding: 3px 9px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.trafficLight {
+  background: #DEF7EC;
+  color: #03543F;
+}
+
+.trafficModerate {
+  background: #FEF08A;
+  color: #713F12;
+}
+
+.trafficHeavy {
+  background: #FDE8E8;
+  color: #9B1C1C;
+}
+
+.tripDetails {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+
+/* Alternative routes selector (FR34) */
+.routeButtonGroup {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.routeBtn {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid #D1D5DB;
+  background: #FFFFFF;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s;
+}
+
+.routeBtnActive {
+  border: 2px solid var(--color-secondary);
+  background: #EFF6FF;
+}
+
+.routeBtnTitle {
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--color-text-main);
+}
+
+.routeBtnDuration {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.sheetActions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.cancelBtn {
+  flex: 1;
+  background-color: #FEE2E2;
+  color: #DC2626;
+  border: 1px solid #FCA5A5;
+  padding: 7px 12px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: center;
+}
+
+.cancelBtn:hover {
+  background-color: #FECACA;
+}
+
+.weatherSlot {
+  flex: 2;
+  background: #FEF3C7;
+  border: 1px solid #FDE68A;
+  color: #92400E;
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Bottom Navigation Bar (Home, Favourites, Profile) */
+.bottomNav {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 58px;
+  background: #FFFFFF;
+  border-top: 1px solid #E5E7EB;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  z-index: 25;
+}
+
+.navItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: #6B7280;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.navItemActive {
+  color: var(--color-secondary);
+  font-weight: 700;
+}
+
+.navIcon {
+  font-size: 18px;
+}
+
+/* Google Places Autocomplete dropdown styling */
+:global(.pac-container) {
+  border-radius: 14px !important;
+  border: 1px solid #E5E7EB !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
+  font-family: inherit !important;
+  margin-top: 6px !important;
+  z-index: 9999 !important;
+}
+
+:global(.pac-item) {
+  padding: 8px 12px !important;
+  font-size: 13px !important;
+  cursor: pointer !important;
+}
+
+:global(.pac-item-query) {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+}
+
+/* Hide Google demo key error dialog popup and dark watermark overlay */
+:global(.gm-err-container),
+:global(.gm-err-content),
+:global(.gm-style-moc) {
+  display: none !important;
+}
+
+/* Custom Places (New) Autocomplete Dropdown */
+.suggestionsDropdown {
+  position: absolute;
+  top: 86px;
+  left: 0;
+  right: 0;
+  background: #FFFFFF;
+  border-radius: 16px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  max-height: 260px;
+  overflow-y: auto;
+  z-index: 30;
+  padding: 6px 0;
+}
+
+.suggestionItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: background 0.15s;
+  border-bottom: 1px solid #F3F4F6;
+  text-align: left;
+}
+
+.suggestionItem:last-child {
+  border-bottom: none;
+}
+
+.suggestionItem:hover {
+  background: #F9FAFB;
+}
+
+.suggestionIcon {
+  font-size: 16px;
+  color: #6B7280;
+  flex-shrink: 0;
+}
+
+.suggestionText {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.suggestionMain {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.suggestionSecondary {
+  font-size: 11px;
+  color: #6B7280;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* "Use Current Location" option at top of dropdown */
+.currentLocationOption {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 16px;
+  cursor: pointer;
+  background: #EFF6FF;
+  border-bottom: 1px solid #DBEAFE;
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.currentLocationOption:hover {
+  background: #DBEAFE;
+}
+
+.currentLocationIcon {
+  font-size: 18px;
+  color: var(--color-secondary);
+}
+
+.currentLocationText {
+  display: flex;
+  flex-direction: column;
+}
+
+.currentLocationMain {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-secondary);
+}
+
+.currentLocationSub {
+  font-size: 11px;
+  color: #3B82F6;
+}
+
+/* Floating "My Location" GPS FAB Button */
+.myLocationButton {
+  position: absolute;
+  right: 16px;
+  bottom: 275px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: var(--color-secondary);
+  z-index: 22;
+  transition: bottom 0.28s cubic-bezier(0.4, 0, 0.2, 1), transform 0.15s, background-color 0.15s, box-shadow 0.15s;
+}
+
+.myLocationButtonCollapsed {
+  bottom: 130px;
+}
+
+.myLocationButton:hover {
+  background-color: #F8FAFC;
+  transform: scale(1.06);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
+}
+
+.myLocationButton:active {
+  transform: scale(0.94);
+}
+
+.myLocationButton.locating {
+  animation: pulseLocation 1.2s infinite ease-in-out;
+  background-color: #EFF6FF;
+}
+
+@keyframes pulseLocation {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.5);
+  }
+  70% {
+    transform: scale(1.08);
+    box-shadow: 0 0 0 10px rgba(37, 99, 235, 0);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
+  }
+}
+
+/* Lot Availability Badge */
+.lotBadge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  background: #DEF7EC;
+  color: #03543F;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+/* Clickable Trip Rows in Bottom Sheet */
+.clickableTripRow {
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 8px;
+  transition: background 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.clickableTripRow:hover {
+  background: #F3F4F6;
+}
+
+.changeTag {
+  font-size: 10px;
+  color: var(--color-secondary);
+  font-weight: 700;
+  text-decoration: underline;
+  margin-left: 6px;
+}
+
+
+
+

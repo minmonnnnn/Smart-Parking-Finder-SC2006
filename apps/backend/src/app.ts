@@ -7,6 +7,7 @@ export interface AppDependencies {
   auth?: Router
   users?: Router
   favourites?: Router
+  routing?: Router
 }
 
 export function createApp(dependencies: AppDependencies): Express {
@@ -20,6 +21,7 @@ export function createApp(dependencies: AppDependencies): Express {
   if (dependencies.auth) app.use('/api/auth', dependencies.auth)
   if (dependencies.users) app.use('/api/users', dependencies.users)
   if (dependencies.favourites) app.use('/api/favourites', dependencies.favourites)
+  if (dependencies.routing) app.use('/api/routes', dependencies.routing)
 
   app.use((_request, _response, next) => {
     next(new ApiException(404, 'NOT_FOUND', 'Not found'))

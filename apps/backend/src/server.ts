@@ -5,6 +5,7 @@ import { createSupabaseAuthGateway, createSupabaseClients } from './lib/supabase
 import { createSupabaseFavouritesGateway } from './lib/supabase-favourites.js'
 import { createAuthRouter, createUsersRouter } from './modules/auth/auth.routes.js'
 import { createFavouritesRouter } from './modules/favourites/favourites.routes.js'
+import routingRouter from './modules/routing/routing.routes.js'
 
 const env = loadEnv(process.env)
 const clients = createSupabaseClients(env)
@@ -15,4 +16,5 @@ createApp({
   auth: createAuthRouter({ gateway: authGateway }),
   users: createUsersRouter({ gateway: authGateway }),
   favourites: createFavouritesRouter({ authGateway, gateway: favouritesGateway }),
+  routing: routingRouter,
 }).listen(env.port)

@@ -5,9 +5,10 @@ import { SignInPage } from './pages/SignInPage'
 import { SignUpPage } from './pages/SignUpPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { FavouritesPage } from './pages/FavouritesPage'
+import { NavigationPage } from './pages/NavigationPage'
 import './App.css'
 
-type Page = 'sign-in' | 'sign-up' | 'search' | 'profile' | 'favourites'
+type Page = 'sign-in' | 'sign-up' | 'search' | 'profile' | 'favourites' | 'navigation'
 
 function AppShell() {
   const { session, logout } = useAuth()
@@ -15,7 +16,7 @@ function AppShell() {
   const [handoff, setHandoff] = useState('')
 
   const activePage: Page = session
-    ? page === 'search' || page === 'favourites'
+    ? page === 'search' || page === 'favourites' || page === 'navigation'
       ? page
       : 'profile'
     : page === 'sign-up'
@@ -57,6 +58,9 @@ function AppShell() {
             onSearch={() => navigate('search')}
           />
         )
+
+      case 'navigation':
+        return <NavigationPage onBack={() => navigate('search')} />
     }
   })()
 
@@ -86,6 +90,14 @@ function AppShell() {
             onClick={() => navigate('favourites')}
           >
             Favourites
+          </button>
+
+          <button
+            type="button"
+            aria-current={activePage === 'navigation' ? 'page' : undefined}
+            onClick={() => navigate('navigation')}
+          >
+            Navigation
           </button>
 
           <button

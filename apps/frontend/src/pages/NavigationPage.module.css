@@ -605,6 +605,56 @@
   margin-left: 6px;
 }
 
+/* Dropdown Section Header */
+.dropdownSectionHeader {
+  padding: 6px 16px 2px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #9CA3AF;
+  text-transform: uppercase;
+}
+
+/* Dropdown Status Notice */
+.dropdownStatusNotice {
+  padding: 8px 16px;
+  font-size: 12px;
+  color: #6B7280;
+}
+
+/* Map Loading / Fallback Notice */
+.mapLoadingNotice {
+  font-size: 11px;
+  color: #9CA3AF;
+}
+
+/* ETA Calculating State */
+.etaCalculatingText {
+  font-size: 1.1rem;
+  color: #6B7280;
+}
+
+/* ETA Minutes Unit */
+.etaUnit {
+  font-size: 13px;
+  font-weight: 500;
+  color: #6B7280;
+}
+
+/* Sheet Header Right Actions */
+.headerRightActions {
+  display: flex;
+  align-items: center;
+}
+
+/* Trip Row Spacing Adjustments */
+.tripRowOrigin {
+  margin-bottom: 3px;
+}
+
+.tripRowDest {
+  margin-top: 3px;
+}
+
 
 
 

@@ -805,7 +805,7 @@ export function NavigationPage({ onBack }: NavigationPageProps) {
               </div>
             </div>
 
-            <div style={{ padding: '6px 16px 2px', fontSize: '11px', fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase' }}>
+            <div className={styles.dropdownSectionHeader}>
               {searchTarget === 'origin'
                 ? 'Popular Starting Points (A)'
                 : searchTarget === 'carpark'
@@ -814,7 +814,7 @@ export function NavigationPage({ onBack }: NavigationPageProps) {
             </div>
 
             {isSearching && (
-              <div style={{ padding: '8px 16px', fontSize: '12px', color: '#6B7280' }}>
+              <div className={styles.dropdownStatusNotice}>
                 Searching Google Places Singapore...
               </div>
             )}
@@ -857,7 +857,7 @@ export function NavigationPage({ onBack }: NavigationPageProps) {
       {mapError && (
         <div className={styles.mapLoading}>
           <span>📍 {mapError}</span>
-          <span style={{ fontSize: '11px', color: '#9CA3AF' }}>Showing navigation controls below</span>
+          <span className={styles.mapLoadingNotice}>Showing navigation controls below</span>
         </div>
       )}
 
@@ -889,15 +889,15 @@ export function NavigationPage({ onBack }: NavigationPageProps) {
         >
           <div className={styles.totalEta}>
             {isCalculatingRoute ? (
-              <span style={{ fontSize: '1.1rem', color: '#6B7280' }}>Calculating ETA...</span>
+              <span className={styles.etaCalculatingText}>Calculating ETA...</span>
             ) : (
               <>
                 {totalDurationMinutes}{' '}
-                <span style={{ fontSize: '13px', fontWeight: 500, color: '#6B7280' }}>mins total</span>
+                <span className={styles.etaUnit}>mins total</span>
               </>
             )}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
+          <div className={styles.headerRightActions}>
             <span
               className={`${styles.trafficBadge} ${
                 currentDriving.traffic === 'Moderate'
@@ -919,8 +919,7 @@ export function NavigationPage({ onBack }: NavigationPageProps) {
             <div className={styles.tripDetails}>
               {/* Tappable Origin Row */}
               <div
-                className={styles.clickableTripRow}
-                style={{ marginBottom: '3px' }}
+                className={`${styles.clickableTripRow} ${styles.tripRowOrigin}`}
                 onClick={() => {
                   setSearchTarget('origin');
                   setSearchQuery('');
@@ -952,8 +951,7 @@ export function NavigationPage({ onBack }: NavigationPageProps) {
 
               {/* Tappable Destination Row */}
               <div
-                className={styles.clickableTripRow}
-                style={{ marginTop: '3px' }}
+                className={`${styles.clickableTripRow} ${styles.tripRowDest}`}
                 onClick={() => {
                   setSearchTarget('destination');
                   setSearchQuery('');

@@ -59,8 +59,6 @@ function svy21ToWgs84(easting: number, northing: number): { latitude: number; lo
   return { latitude: parseFloat((lat*180/Math.PI).toFixed(6)), longitude: parseFloat((lon*180/Math.PI).toFixed(6)) };
 }
 
-const SHELTERED = ['Basement', 'Multi-storey', 'Covered'];
-
 function mapType(raw: string): string | null {
   const u = raw.toUpperCase();
   if (u.includes('BASEMENT')) return 'Basement';

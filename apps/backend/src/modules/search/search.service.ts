@@ -24,6 +24,7 @@ import { getAvailabilityByCarParkNo } from '../availability/repository.js';
 import { getDrivingRoute, getWalkingRoute, calculateDistanceKm } from '../routing/routing.service.js';
 import { calculateRecommendationScore } from '../recommendation/recommendation-score.js';
 import { getHistoricalAvailabilityRatio } from '../recommendation/historical-availability.js';
+import { getWeather } from '../weather/weather.service.js';
 
 const AVAILABILITY_STATUS_RANK = { High: 3, Moderate: 2, Low: 1, Unavailable: 0 } as const;
 
@@ -60,7 +61,6 @@ export interface NearbyCarparksInput {
   originLng?: number;
   sort?: CarparkSort;
   filters?: CarparkFilters;
-  rainExpected?: boolean;
 }
 
 export async function getNearbyCarparks(
@@ -74,12 +74,20 @@ export async function getNearbyCarparks(
     originLng,
     sort = 'distance',
     filters = {},
-    rainExpected = false,
   } = input;
 
   const degradedServices: CarparkDataService[] = [];
 
-  // 1. Fetch candidate carparks from DB
+  // 1. Fetch weather for the destination (Moufooza — FR24–FR26)
+  let rainExpected = false;
+  try {
+    const weather = await getWeather(destinationLat, destinationLng);
+    rainExpected = weather.rainExpected;
+  } catch {
+    degradedServices.push('weather');
+  }
+
+  // 3. Fetch candidate carparks from DB
   let carparks: Carpark[];
   try {
     carparks = await getCarparksNearby(client, destinationLat, destinationLng);

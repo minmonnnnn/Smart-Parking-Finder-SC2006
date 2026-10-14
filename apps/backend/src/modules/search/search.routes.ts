@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from 'express';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { ApiException } from '../../lib/errors/index.js';
 import { getNearbyCarparks, getCarparkDetails } from './search.service.js';
+import { searchDestinations, resolveDestination } from './destinations.service.js';
 import type { CarparkFilters, CarparkSort } from '@smart-parking/shared-types';
 
 export function createSearchRouter(adminClient: SupabaseClient): Router {
@@ -73,6 +74,35 @@ export function createSearchRouter(adminClient: SupabaseClient): Router {
       throw new ApiException(404, 'NOT_FOUND', `Carpark ${carParkNo} not found.`);
     }
     return res.status(200).json(details);
+  });
+
+  // GET /api/destinations/search?query=<text>  FR3–FR4
+  router.get('/destinations/search', async (req: Request, res: Response) => {
+    const query = req.query['query'] as string | undefined;
+    if (!query?.trim()) {
+      throw new ApiException(400, 'VALIDATION_ERROR', 'query param is required.');
+    }
+    try {
+      const suggestions = await searchDestinations(query.trim());
+      return res.status(200).json(suggestions);
+    } catch {
+      throw new ApiException(503, 'EXTERNAL_SERVICE_UNAVAILABLE', 'Destination search is temporarily unavailable.');
+    }
+  });
+
+  // GET /api/destinations/:placeId/resolve  FR5–FR6
+  router.get('/destinations/:placeId/resolve', async (req: Request, res: Response) => {
+    const placeId = req.params['placeId'] as string;
+    try {
+      const destination = await resolveDestination(placeId);
+      if (!destination) {
+        throw new ApiException(404, 'DESTINATION_NOT_FOUND', `Place ${placeId} not found.`);
+      }
+      return res.status(200).json(destination);
+    } catch (err) {
+      if (err instanceof ApiException) throw err;
+      throw new ApiException(503, 'EXTERNAL_SERVICE_UNAVAILABLE', 'Destination resolve is temporarily unavailable.');
+    }
   });
 
   return router;

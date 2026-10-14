@@ -9,7 +9,7 @@ export function createSearchRouter(adminClient: SupabaseClient): Router {
 
   // GET /api/carparks/nearby
   router.get('/carparks/nearby', async (req: Request, res: Response) => {
-    const { destinationLat, destinationLng, originLat, originLng, sort, vehicleType, ...rest } = req.query;
+    const { destinationLat, destinationLng, originLat, originLng, sort, ...rest } = req.query;
 
     const dLat = parseFloat(destinationLat as string);
     const dLng = parseFloat(destinationLng as string);

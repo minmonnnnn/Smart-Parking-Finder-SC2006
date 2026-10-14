@@ -35,14 +35,22 @@ interface HistoricalRow {
   total_lots: number;
 }
 
-async function getKnownCarparks(): Promise<Map<string, number>> {
-  const { data, error } = await supabase.from('carparks').select('car_park_no, total_lots');
-  if (error) throw new Error(`Failed to fetch carparks: ${error.message}`);
-  const map = new Map<string, number>();
-  for (const row of data ?? []) {
-    map.set(row.car_park_no as string, (row.total_lots as number) ?? 0);
+async function getKnownCarparks(): Promise<Set<string>> {
+  // Supabase defaults to 1000 rows — fetch in pages to get all carparks
+  const ids = new Set<string>();
+  const PAGE = 1000;
+  let from = 0;
+  while (true) {
+    const { data, error } = await supabase
+      .from('carparks')
+      .select('car_park_no')
+      .range(from, from + PAGE - 1);
+    if (error) throw new Error(`Failed to fetch carparks: ${error.message}`);
+    for (const row of data ?? []) ids.add(row.car_park_no as string);
+    if ((data?.length ?? 0) < PAGE) break;
+    from += PAGE;
   }
-  return map;
+  return ids;
 }
 
 function parseCSV(content: string): { dateTime: string; carparkId: string; availableSlots: number }[] {
@@ -58,7 +66,7 @@ function parseCSV(content: string): { dateTime: string; carparkId: string; avail
 }
 
 async function run() {
-  const historicalDir = join(__dirname, '../../../../data/historical');
+  const historicalDir = join(__dirname, '../../../../../data/historical');
   const files = readdirSync(historicalDir).filter((f) => f.endsWith('.csv')).sort();
   console.log(`Found ${files.length} CSV files`);
 
@@ -74,11 +82,7 @@ async function run() {
 
     const rows: HistoricalRow[] = [];
     for (const { dateTime, carparkId, availableSlots } of parsed) {
-      const totalLots = knownCarparks.get(carparkId);
-      // Skip if carpark not in DB or total_lots unknown/zero
-      if (totalLots === undefined || totalLots <= 0) { totalSkipped++; continue; }
-      // Skip invalid ratios
-      if (availableSlots > totalLots) { totalSkipped++; continue; }
+      if (!knownCarparks.has(carparkId)) { totalSkipped++; continue; }
 
       const dt = new Date(dateTime);
       if (isNaN(dt.getTime())) { totalSkipped++; continue; }
@@ -89,7 +93,7 @@ async function run() {
         day_of_week: dt.getDay(),
         time_bucket_start: `${String(dt.getHours()).padStart(2, '0')}:00:00`,
         available_lots: availableSlots,
-        total_lots: totalLots,
+        total_lots: 0,
       });
     }
 

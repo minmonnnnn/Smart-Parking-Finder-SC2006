@@ -39,6 +39,7 @@ export function NavigationPage({ onBack }: NavigationPageProps) {
         (position) => {
           const rawLat = position.coords.latitude;
           const rawLng = position.coords.longitude;
+          //set the boundary for singapore 
           const inSingapore = rawLat >= 1.15 && rawLat <= 1.48 && rawLng >= 103.55 && rawLng <= 104.05;
           const lat = inSingapore ? rawLat : 1.3483;
           const lng = inSingapore ? rawLng : 103.6831;
@@ -57,6 +58,7 @@ export function NavigationPage({ onBack }: NavigationPageProps) {
   }, []);
 
   // 2. Fetch routes and alternatives via custom hook
+
   const {
     drivingRoutes,
     activeRouteIndex,

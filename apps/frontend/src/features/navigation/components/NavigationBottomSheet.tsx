@@ -138,7 +138,7 @@ export function NavigationBottomSheet({
           />
 
           {/* User Control & Navigation Actions */}
-          <div className={styles.actionRow}>
+          <div className={styles.sheetActions}>
             <button
               type="button"
               className={styles.startNavBtn}
@@ -166,3 +166,4 @@ export function NavigationBottomSheet({
     </div>
   );
 }
+

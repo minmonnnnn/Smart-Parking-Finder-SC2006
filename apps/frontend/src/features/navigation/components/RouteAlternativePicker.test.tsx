@@ -68,3 +68,4 @@ describe('RouteAlternativePicker', () => {
     expect(handleSelectRoute).toHaveBeenCalledWith(1);
   });
 });
+

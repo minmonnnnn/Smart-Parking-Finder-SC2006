@@ -101,3 +101,4 @@ describe('NavigationBottomSheet', () => {
     expect(onToggleCollapse).toHaveBeenCalledTimes(1);
   });
 });
+

@@ -283,41 +283,126 @@
 /* Alternative routes selector (FR34) */
 .routeButtonGroup {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   gap: 8px;
   margin-bottom: 10px;
 }
 
-.routeBtn {
+.routeBtn,
+.routeButton {
   padding: 8px 10px;
-  border-radius: 10px;
-  border: 1px solid #D1D5DB;
+  border-radius: 12px;
+  border: 1.5px solid #E5E7EB;
   background: #FFFFFF;
   cursor: pointer;
   text-align: left;
-  transition: all 0.15s;
+  transition: all 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
-.routeBtnActive {
+.routeBtn:hover,
+.routeButton:hover {
+  border-color: #93C5FD;
+  background: #F8FAFC;
+}
+
+.routeBtnActive,
+.routeButtonActive {
   border: 2px solid var(--color-secondary);
   background: #EFF6FF;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.12);
 }
 
-.routeBtnTitle {
+.routeSummaryRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.routeBtnTitle,
+.routeSummaryTitle {
   font-weight: 700;
   font-size: 12px;
   color: var(--color-text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.routeBtnDuration {
-  font-size: 11px;
+.routeBtnActive .routeBtnTitle,
+.routeBtnActive .routeSummaryTitle,
+.routeButtonActive .routeBtnTitle,
+.routeButtonActive .routeSummaryTitle {
+  color: var(--color-secondary);
+}
+
+.routeSummaryRow .trafficBadge {
+  padding: 1px 6px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  flex-shrink: 0;
+}
+
+.routeMetricsRow {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: 11.5px;
   color: var(--color-text-muted);
 }
 
-.sheetActions {
+.routeBtnDuration,
+.routeDurationText {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--color-text-main);
+}
+
+.routeBtnActive .routeDurationText,
+.routeButtonActive .routeDurationText {
+  color: var(--color-secondary);
+}
+
+.routeDistanceText {
+  font-size: 11px;
+  color: #6B7280;
+}
+
+.sheetActions,
+.actionRow {
   display: flex;
   gap: 8px;
   align-items: center;
+}
+
+.startNavBtn {
+  flex: 1;
+  background-color: var(--color-secondary);
+  color: #FFFFFF;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+  text-align: center;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.startNavBtn:hover {
+  background-color: #1D4ED8;
+  transform: translateY(-1px);
+}
+
+.startNavBtn:active {
+  transform: translateY(0);
 }
 
 .cancelBtn {
@@ -325,12 +410,14 @@
   background-color: #FEE2E2;
   color: #DC2626;
   border: 1px solid #FCA5A5;
-  padding: 7px 12px;
+  padding: 8px 12px;
   border-radius: 10px;
   font-weight: 600;
   font-size: 12px;
   cursor: pointer;
   text-align: center;
+  transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
 .cancelBtn:hover {
@@ -338,16 +425,20 @@
 }
 
 .weatherSlot {
-  flex: 2;
+  flex: 1.5;
   background: #FEF3C7;
   border: 1px solid #FDE68A;
   color: #92400E;
-  padding: 6px 10px;
+  padding: 7px 10px;
   border-radius: 10px;
   font-size: 11px;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Bottom Navigation Bar (Home, Favourites, Profile) */

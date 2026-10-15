@@ -49,7 +49,21 @@ function AppShell() {
         return <SignUpPage onSwitchMode={() => navigate('sign-in')} />
 
       case 'search':
-        return <SearchPage onSelectCarpark={openCarparkDetail} />
+      case 'carpark-detail':
+        return (
+          <>
+            <div style={activePage === 'carpark-detail' ? { display: 'none' } : undefined}>
+              <SearchPage onSelectCarpark={openCarparkDetail} />
+            </div>
+            {activePage === 'carpark-detail' && selectedCarParkNo && (
+              <CarparkDetailPage
+                carParkNo={selectedCarParkNo}
+                onBack={() => navigate('search')}
+                onNavigate={() => navigate('navigation')}
+              />
+            )}
+          </>
+        )
 
       case 'profile':
         return <ProfilePage onAccountDeleted={() => navigate('sign-in')} />
@@ -68,15 +82,6 @@ function AppShell() {
 
       case 'navigation':
         return <NavigationPage onBack={() => navigate('search')} />
-
-      case 'carpark-detail':
-        return selectedCarParkNo ? (
-          <CarparkDetailPage
-            carParkNo={selectedCarParkNo}
-            onBack={() => navigate('search')}
-            onNavigate={() => navigate('navigation')}
-          />
-        ) : null
     }
   })()
 

@@ -1,23 +1,36 @@
 import { Router } from "express";
-import { getAvailabilityByCarParkNo } from "./repository.js";
+import { ApiException } from "../../lib/errors/index.js";
+import type { AvailabilityRepository } from "./repository.js";
 
-const router: Router = Router();
+export function createAvailabilityRouter(
+  repository: Pick<AvailabilityRepository, "getAvailabilityByCarParkNo">,
+): Router {
+  const router: Router = Router();
 
-router.get("/:carParkNo/availability", (req, res) => {
-  const { carParkNo } = req.params;
+  router.get("/:carParkNo/availability", async (req, res, next) => {
+    try {
+      const availability = await repository.getAvailabilityByCarParkNo(
+        req.params.carParkNo,
+      );
 
-  const availability = getAvailabilityByCarParkNo(carParkNo);
+      if (!availability) {
+        next(
+          new ApiException(404, "NOT_FOUND", "Carpark availability not found"),
+        );
+        return;
+      }
 
-  if (!availability) {
-    return res.status(404).json({
-      error: {
-        code: "NOT_FOUND",
-        message: "Carpark availability not found",
-      },
-    });
-  }
+      res.status(200).json(availability);
+    } catch {
+      next(
+        new ApiException(
+          503,
+          "EXTERNAL_SERVICE_UNAVAILABLE",
+          "Availability service unavailable",
+        ),
+      );
+    }
+  });
 
-  return res.status(200).json(availability);
-});
-
-export default router;
+  return router;
+}

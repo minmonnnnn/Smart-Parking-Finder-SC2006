@@ -5,12 +5,14 @@ import {
   type SendAvailabilityNotification,
 } from "./alerts.service.js";
 import { createAvailabilityFetcher, type LtaSourceOptions } from "./sources.js";
+import type { AvailabilityRepository } from "./repository.js";
 
 const POLL_INTERVAL_MS = 60 * 1000;
 
 export function startAvailabilityPoller(
   sendNotification?: SendAvailabilityNotification,
   lta?: LtaSourceOptions,
+  repository?: Pick<AvailabilityRepository, "saveAvailabilityRecords">,
 ): () => void {
   const fetchLatest = lta
     ? createAvailabilityFetcher(lta)
@@ -26,6 +28,12 @@ export function startAvailabilityPoller(
 
     try {
       const latestData = await fetchLatest();
+
+      if (stopped) return;
+
+      if (repository) {
+        await repository.saveAvailabilityRecords(latestData);
+      }
 
       if (stopped) return;
 

@@ -21,4 +21,6 @@ createApp({
   routing: routingRouter,
   search: createSearchRouter(clients.adminClient),
   weather: weatherRouter,
-}).listen(env.port)
+}).listen(env.port, () => {
+  console.log(`Backend listening on http://localhost:${env.port}`)
+})

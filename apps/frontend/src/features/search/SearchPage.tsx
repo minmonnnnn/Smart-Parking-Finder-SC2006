@@ -151,7 +151,7 @@ function Badge({ children }: { children: ReactNode }) {
   );
 }
 
-function CarparkCard({ item }: { item: RankedCarpark }) {
+function CarparkCard({ item, onSelect }: { item: RankedCarpark; onSelect?: () => void }) {
   const { carpark, distanceMeters, walkingEtaMinutes, availability } = item;
   const pct = progressPercent(availability.availableLots, availability.totalLots);
   const tone = availabilityTone(Math.round(pct));
@@ -176,7 +176,7 @@ function CarparkCard({ item }: { item: RankedCarpark }) {
             <Badge>{carpark.carParkType}</Badge>
           </div>
         </div>
-        <button style={{
+        <button onClick={onSelect} style={{
           display: "inline-flex", alignItems: "center", gap: vars.space[1],
           padding: `${vars.space[1]} ${vars.space[2]}`, fontSize: vars.fontSize.sm,
           fontFamily: vars.font.family, fontWeight: vars.fontWeight.medium,
@@ -407,7 +407,7 @@ function SearchBar({
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
-export default function SearchPage() {
+export default function SearchPage({ onSelectCarpark }: { onSelectCarpark?: (carParkNo: string) => void }) {
   const [query, setQuery] = useState("");
   const [searched, setSearched] = useState(false);
   const [destination, setDestination] = useState("");
@@ -598,7 +598,11 @@ export default function SearchPage() {
 
         <div style={{ display: "flex", flexDirection: "column", gap: vars.space[3] }}>
           {results.map((item) => (
-            <CarparkCard key={item.carpark.carParkNo} item={item} />
+            <CarparkCard
+              key={item.carpark.carParkNo}
+              item={item}
+              onSelect={() => onSelectCarpark?.(item.carpark.carParkNo)}
+            />
           ))}
         </div>
       </div>

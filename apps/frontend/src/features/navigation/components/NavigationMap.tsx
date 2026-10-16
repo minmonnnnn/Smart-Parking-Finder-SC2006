@@ -1,4 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
+import { useLoadScript } from '@react-google-maps/api';
+import { GOOGLE_MAPS_SCRIPT_ID, GOOGLE_MAPS_LIBRARIES } from '../../../lib/googleMaps';
 import styles from '../../../pages/NavigationPage.module.css';
 import { INITIAL_DRIVING_PATH, INITIAL_WALKING_PATH } from '../constants';
 
@@ -37,105 +39,78 @@ export function NavigationMap({
 
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 
-  const [mapLoaded, setMapLoaded] = useState(false);
-  const [mapError, setMapError] = useState<string | null>(
-    apiKey ? null : 'VITE_GOOGLE_MAPS_API_KEY is not configured in .env'
-  );
+  const { isLoaded, loadError } = useLoadScript({
+    id: GOOGLE_MAPS_SCRIPT_ID,
+    googleMapsApiKey: apiKey,
+    libraries: GOOGLE_MAPS_LIBRARIES,
+  });
+
+  const mapError = !apiKey
+    ? 'VITE_GOOGLE_MAPS_API_KEY is not configured in .env'
+    : loadError
+    ? 'Google Maps script could not be loaded. Please check network/key permissions.'
+    : null;
 
   // Initialize Google Maps
   useEffect(() => {
-    if (!apiKey) {
-      return;
+    if (!isLoaded || !mapRef.current || mapInstanceRef.current || !window.google?.maps) return;
+
+    try {
+      const map = new window.google.maps.Map(mapRef.current, {
+        center: { lat: carpark.lat, lng: carpark.lng },
+        zoom: 14,
+        disableDefaultUI: true,
+        gestureHandling: 'greedy',
+      });
+      mapInstanceRef.current = map;
+
+      // Driving Polyline (Blue)
+      drivingPolylineRef.current = new window.google.maps.Polyline({
+        path: drivingPath || INITIAL_DRIVING_PATH,
+        geodesic: true,
+        strokeColor: '#2563EB',
+        strokeOpacity: 0.95,
+        strokeWeight: 6,
+        map: map,
+      });
+
+      // Walking Polyline (Green dashed)
+      walkingPolylineRef.current = new window.google.maps.Polyline({
+        path: walkingPath || INITIAL_WALKING_PATH,
+        geodesic: true,
+        strokeColor: '#10B981',
+        strokeOpacity: 0.9,
+        strokeWeight: 4,
+        map: map,
+      });
+
+      // Origin Marker (A)
+      originMarkerRef.current = new window.google.maps.Marker({
+        position: origin,
+        map: map,
+        title: origin.name,
+        label: { text: 'A', color: 'white', fontWeight: 'bold' },
+      });
+
+      // Carpark Marker (P)
+      carparkMarkerRef.current = new window.google.maps.Marker({
+        position: carpark,
+        map: map,
+        title: carpark.name,
+        label: { text: 'P', color: '#78350F', fontWeight: 'bold' },
+      });
+
+      // Destination Marker (B)
+      destMarkerRef.current = new window.google.maps.Marker({
+        position: destination,
+        map: map,
+        title: destination.name,
+        label: { text: 'B', color: 'white', fontWeight: 'bold' },
+      });
+    } catch (err: unknown) {
+      console.error('Error rendering Google Map:', err);
     }
-
-    if (window.google?.maps) {
-      initMap();
-      return;
-    }
-
-    const scriptId = 'google-maps-script';
-    let script = document.getElementById(scriptId) as HTMLScriptElement | null;
-
-    if (!script) {
-      script = document.createElement('script');
-      script.id = scriptId;
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry`;
-      script.async = true;
-      script.defer = true;
-      script.onload = () => {
-        initMap();
-      };
-      script.onerror = () => {
-        setMapError('Google Maps script could not be loaded. Please check network/key permissions.');
-      };
-      document.head.appendChild(script);
-    } else {
-      script.addEventListener('load', initMap);
-    }
-
-    function initMap() {
-      if (!mapRef.current || !window.google?.maps || mapInstanceRef.current) return;
-
-      try {
-        const map = new window.google.maps.Map(mapRef.current, {
-          center: { lat: carpark.lat, lng: carpark.lng },
-          zoom: 14,
-          disableDefaultUI: true,
-          gestureHandling: 'greedy',
-        });
-        mapInstanceRef.current = map;
-
-        // Driving Polyline (Blue)
-        drivingPolylineRef.current = new window.google.maps.Polyline({
-          path: drivingPath || INITIAL_DRIVING_PATH,
-          geodesic: true,
-          strokeColor: '#2563EB',
-          strokeOpacity: 0.95,
-          strokeWeight: 6,
-          map: map,
-        });
-
-        // Walking Polyline (Green dashed)
-        walkingPolylineRef.current = new window.google.maps.Polyline({
-          path: walkingPath || INITIAL_WALKING_PATH,
-          geodesic: true,
-          strokeColor: '#10B981',
-          strokeOpacity: 0.9,
-          strokeWeight: 4,
-          map: map,
-        });
-
-        // Origin Marker (A)
-        originMarkerRef.current = new window.google.maps.Marker({
-          position: origin,
-          map: map,
-          title: origin.name,
-          label: { text: 'A', color: 'white', fontWeight: 'bold' },
-        });
-
-        // Carpark Marker (P)
-        carparkMarkerRef.current = new window.google.maps.Marker({
-          position: carpark,
-          map: map,
-          title: carpark.name,
-          label: { text: 'P', color: '#78350F', fontWeight: 'bold' },
-        });
-
-        // Destination Marker (B)
-        destMarkerRef.current = new window.google.maps.Marker({
-          position: destination,
-          map: map,
-          title: destination.name,
-          label: { text: 'B', color: 'white', fontWeight: 'bold' },
-        });
-
-        setMapLoaded(true);
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : 'Error rendering Google Map.';
-        setMapError(message);
-      }
-    }
-  }, [apiKey, origin, carpark, destination, drivingPath, walkingPath]);
+  }, [isLoaded, origin, carpark, destination, drivingPath, walkingPath]);
 
   // Synchronize driving route path with polyline
   useEffect(() => {
@@ -169,20 +144,34 @@ export function NavigationMap({
     }
 
     if (mapInstanceRef.current && window.google?.maps) {
-      if (isSheetVisible) {
-        const bounds = new window.google.maps.LatLngBounds();
-        bounds.extend({ lat: origin.lat, lng: origin.lng });
-        bounds.extend({ lat: carpark.lat, lng: carpark.lng });
-        bounds.extend({ lat: destination.lat, lng: destination.lng });
-        mapInstanceRef.current.fitBounds(bounds, 50);
-      } else if (showCarparksList) {
-        const bounds = new window.google.maps.LatLngBounds();
-        bounds.extend({ lat: origin.lat, lng: origin.lng });
-        bounds.extend({ lat: destination.lat, lng: destination.lng });
-        mapInstanceRef.current.fitBounds(bounds, 60);
-      } else {
-        mapInstanceRef.current.setCenter({ lat: origin.lat, lng: origin.lng });
-        mapInstanceRef.current.setZoom(14);
+      try {
+        const isValidCoord = (c?: { lat?: number; lng?: number }) =>
+          typeof c?.lat === 'number' && !isNaN(c.lat) && typeof c?.lng === 'number' && !isNaN(c.lng);
+
+        if (isSheetVisible && isValidCoord(origin) && isValidCoord(carpark) && isValidCoord(destination)) {
+          const lats = [origin.lat, carpark.lat, destination.lat];
+          const lngs = [origin.lng, carpark.lng, destination.lng];
+          mapInstanceRef.current.fitBounds({
+            north: Math.max(...lats),
+            south: Math.min(...lats),
+            east: Math.max(...lngs),
+            west: Math.min(...lngs),
+          }, 50);
+        } else if (showCarparksList && isValidCoord(origin) && isValidCoord(destination)) {
+          const lats = [origin.lat, destination.lat];
+          const lngs = [origin.lng, destination.lng];
+          mapInstanceRef.current.fitBounds({
+            north: Math.max(...lats),
+            south: Math.min(...lats),
+            east: Math.max(...lngs),
+            west: Math.min(...lngs),
+          }, 60);
+        } else if (isValidCoord(origin)) {
+          mapInstanceRef.current.setCenter({ lat: origin.lat, lng: origin.lng });
+          mapInstanceRef.current.setZoom(14);
+        }
+      } catch (err) {
+        console.warn('Map fitBounds warning:', err);
       }
     }
   }, [origin, carpark, destination, isSheetVisible, showCarparksList]);
@@ -193,7 +182,7 @@ export function NavigationMap({
       <div ref={mapRef} className={styles.mapContainer} />
 
       {/* Loading state before Google Maps tiles appear */}
-      {!mapLoaded && !mapError && (
+      {!isLoaded && !mapError && (
         <div className={styles.mapLoading}>
           <span>📍 Loading Google Maps Singapore...</span>
         </div>

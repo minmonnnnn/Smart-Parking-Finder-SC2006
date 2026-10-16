@@ -7,6 +7,13 @@ import { NavigationBottomSheet } from '../features/navigation/components/Navigat
 import { SearchBar, type AvailabilityLevel, type YesNo } from '../features/search/SearchBar';
 import { CarparkCard } from '../features/search/CarparkCard';
 import { toCarparkCardData, type CarparkCardData } from '../features/search/carparkCardUtils';
+import { CarparkDetailPage } from './CarparkDetailPage';
+import { getCarparkDetails } from '../features/search/carparkApi';
+import {
+  searchDestinations,
+  resolveDestination,
+  getNearbyCarparks,
+} from '../features/search/searchApi';
 
 // Feature Hooks, Constants & Types
 import { useNavigationRoutes } from '../features/navigation/hooks/useNavigationRoutes';
@@ -24,7 +31,7 @@ import type {
   SearchTargetMode,
 } from '../features/navigation/types';
 
-export function NavigationPage({ onBack }: NavigationPageProps) {
+export function NavigationPage({ onBack, initialCarparkNo }: NavigationPageProps) {
   // Navigation Target Coordinates
   const [originLocation, setOriginLocation] = useState(SAMPLE_ORIGIN);
   const [carparkLocation, setCarparkLocation] = useState(DEFAULT_CARPARK);
@@ -36,10 +43,11 @@ export function NavigationPage({ onBack }: NavigationPageProps) {
   const [isSheetVisible, setIsSheetVisible] = useState(true);
   const [, setSearchTarget] = useState<SearchTargetMode>('destination');
 
-  // Recommended Carparks List States
+  // Recommended Carparks List & Detail View States
   const [recommendedCarparks, setRecommendedCarparks] = useState<CarparkCardData[]>([]);
   const [showCarparksList, setShowCarparksList] = useState(false);
   const [isLoadingCarparks, setIsLoadingCarparks] = useState(false);
+  const [selectedDetailCarparkNo, setSelectedDetailCarparkNo] = useState<string | null>(null);
 
   // Min's Search & Filter States
   const [searchQuery, setSearchQuery] = useState('');
@@ -75,6 +83,31 @@ export function NavigationPage({ onBack }: NavigationPageProps) {
       );
     }
   }, []);
+
+  // 1.5 Load initial carpark if navigated with initialCarparkNo
+  useEffect(() => {
+    if (initialCarparkNo) {
+      let cancelled = false;
+      getCarparkDetails(initialCarparkNo)
+        .then((d) => {
+          if (cancelled) return;
+          setCarparkLocation({
+            lat: d.carpark.latitude,
+            lng: d.carpark.longitude,
+            name: d.carpark.address || d.carpark.carParkNo,
+            availableLots: d.availability.availableLots,
+          });
+          setIsSheetVisible(true);
+          setShowCarparksList(false);
+        })
+        .catch((err) => {
+          console.warn('Failed to load initial carpark:', err);
+        });
+      return () => {
+        cancelled = true;
+      };
+    }
+  }, [initialCarparkNo]);
 
   // 2. Fetch routes and alternatives via custom hook
   const {
@@ -143,12 +176,11 @@ export function NavigationPage({ onBack }: NavigationPageProps) {
     const timer = setTimeout(async () => {
       setIsSearching(true);
       try {
-        const backendRes = await fetch(`/api/destinations/search?query=${encodeURIComponent(searchQuery)}`);
-        if (backendRes.ok) {
-          const data = await backendRes.json();
+        try {
+          const data = await searchDestinations(searchQuery);
           if (Array.isArray(data) && data.length > 0) {
             setSuggestions(
-              data.map((item: { placeId: string; name: string; address: string }) => ({
+              data.map((item) => ({
                 placeId: item.placeId,
                 main: item.name,
                 sub: item.address || 'Singapore',
@@ -156,6 +188,8 @@ export function NavigationPage({ onBack }: NavigationPageProps) {
             );
             return;
           }
+        } catch {
+          // Fall through to Google Places / popular destinations
         }
 
         if (apiKey) {
@@ -205,34 +239,51 @@ export function NavigationPage({ onBack }: NavigationPageProps) {
     setIsLoadingCarparks(true);
     setShowCarparksList(true);
     try {
-      const queryParams = new URLSearchParams({
-        destinationLat: String(destLat),
-        destinationLng: String(destLng),
-        sort: pricingAsc ? 'distance' : 'recommended',
+      const data = await getNearbyCarparks({
+        destinationLat: destLat,
+        destinationLng: destLng,
+        originLat: originLocation.lat,
+        originLng: originLocation.lng,
+        filters: {
+          ...(evFilter === 'yes' ? { evChargingOnly: true } : {}),
+          ...(shelteredFilter === 'yes' ? { shelteredOnly: true } : {}),
+        },
       });
-      if (evFilter === 'yes') queryParams.append('evChargingOnly', 'true');
-      if (shelteredFilter === 'yes') queryParams.append('shelteredOnly', 'true');
-      if (availabilityFilter.has('high')) queryParams.append('minAvailability', 'High');
-      else if (availabilityFilter.has('moderate')) queryParams.append('minAvailability', 'Moderate');
-      else if (availabilityFilter.has('low')) queryParams.append('minAvailability', 'Low');
 
-      const carparkRes = await fetch(`/api/carparks/nearby?${queryParams.toString()}`);
-      if (carparkRes.ok) {
-        const data = await carparkRes.json();
-        const carparks = data.carparks || [];
-        if (carparks.length > 0) {
-          const cardItems = carparks.map(toCarparkCardData);
-          setRecommendedCarparks(cardItems);
-          setIsLoadingCarparks(false);
-          return;
+      const carparks = data.carparks || [];
+      if (carparks.length > 0) {
+        let cardItems = carparks.map(toCarparkCardData);
+
+        // Path B: Client-side filtering
+        if (evFilter === 'no') {
+          cardItems = cardItems.filter((cp) => !cp.hasEvCharging);
         }
+        if (shelteredFilter === 'no') {
+          cardItems = cardItems.filter((cp) => !cp.isSheltered);
+        }
+        if (availabilityFilter.size > 0) {
+          cardItems = cardItems.filter((cp) => {
+            const pct = cp.totalLots > 0 ? (cp.availableLots / cp.totalLots) * 100 : 0;
+            const level: AvailabilityLevel = pct >= 30 ? 'high' : pct >= 10 ? 'moderate' : 'low';
+            return availabilityFilter.has(level);
+          });
+        }
+
+        // Path B: Client-side sorting
+        if (pricingAsc) {
+          cardItems.sort((a, b) => (a.parkingCost ?? Infinity) - (b.parkingCost ?? Infinity));
+        }
+
+        setRecommendedCarparks(cardItems);
+        setIsLoadingCarparks(false);
+        return;
       }
     } catch {
       // Fall through to fallback
     }
 
     // Fallback: pick curated popular carparks sorted by proximity
-    const fallbackItems: CarparkCardData[] = POPULAR_CARPARKS.filter(
+    let fallbackItems: CarparkCardData[] = POPULAR_CARPARKS.filter(
       (cp): cp is PlaceItem & { lat: number; lng: number } =>
         typeof cp.lat === 'number' && typeof cp.lng === 'number'
     ).map((cp) => {
@@ -245,13 +296,34 @@ export function NavigationPage({ onBack }: NavigationPageProps) {
         availableLots: cp.availableLots ?? 42,
         totalLots: 120,
         isSheltered: true,
-        hasEvCharging: false,
+        hasEvCharging: idx % 2 === 0,
         parkingCost: 0.6,
         carparkType: 'Multi-storey',
         latitude: cp.lat,
         longitude: cp.lng,
       };
     }).sort((a, b) => a.distanceMeters - b.distanceMeters);
+
+    if (evFilter === 'yes') {
+      fallbackItems = fallbackItems.filter((cp) => cp.hasEvCharging);
+    } else if (evFilter === 'no') {
+      fallbackItems = fallbackItems.filter((cp) => !cp.hasEvCharging);
+    }
+    if (shelteredFilter === 'yes') {
+      fallbackItems = fallbackItems.filter((cp) => cp.isSheltered);
+    } else if (shelteredFilter === 'no') {
+      fallbackItems = fallbackItems.filter((cp) => !cp.isSheltered);
+    }
+    if (availabilityFilter.size > 0) {
+      fallbackItems = fallbackItems.filter((cp) => {
+        const pct = cp.totalLots > 0 ? (cp.availableLots / cp.totalLots) * 100 : 0;
+        const level: AvailabilityLevel = pct >= 30 ? 'high' : pct >= 10 ? 'moderate' : 'low';
+        return availabilityFilter.has(level);
+      });
+    }
+    if (pricingAsc) {
+      fallbackItems.sort((a, b) => (a.parkingCost ?? Infinity) - (b.parkingCost ?? Infinity));
+    }
 
     setRecommendedCarparks(fallbackItems);
     setIsLoadingCarparks(false);
@@ -287,16 +359,13 @@ export function NavigationPage({ onBack }: NavigationPageProps) {
 
     if ((lat === undefined || lng === undefined) && place.placeId) {
       try {
-        const resolveRes = await fetch(`/api/destinations/${encodeURIComponent(place.placeId)}/resolve`);
-        if (resolveRes.ok) {
-          const resolved = await resolveRes.json();
-          if (resolved.latitude && resolved.longitude) {
-            lat = resolved.latitude;
-            lng = resolved.longitude;
-          }
+        const resolved = await resolveDestination(place.placeId);
+        if (resolved.latitude && resolved.longitude) {
+          lat = resolved.latitude;
+          lng = resolved.longitude;
         }
       } catch {
-        // Fall through
+        // Fall through to Google Places API fallback
       }
 
       if ((lat === undefined || lng === undefined) && apiKey) {
@@ -358,6 +427,7 @@ export function NavigationPage({ onBack }: NavigationPageProps) {
   const handleCancelNavigation = () => {
     setIsSheetVisible(false);
     setShowCarparksList(false);
+    setSelectedDetailCarparkNo(null);
     setSearchQuery('');
   };
 
@@ -451,6 +521,11 @@ export function NavigationPage({ onBack }: NavigationPageProps) {
                 <CarparkCard
                   key={cp.carParkNo || `${cp.name}-${idx}`}
                   cp={cp}
+                  onSelect={(cardData) => {
+                    if (cardData.carParkNo) {
+                      setSelectedDetailCarparkNo(cardData.carParkNo);
+                    }
+                  }}
                   onNavigate={handleNavigateToCarpark}
                 />
               ))}
@@ -475,6 +550,68 @@ export function NavigationPage({ onBack }: NavigationPageProps) {
           onOpenTargetSearch={(target) => setSearchTarget(target)}
           onCancelNav={handleCancelNavigation}
           weatherInfo={liveWeather}
+        />
+      )}
+
+      {/* Carpark Detail Page Overlay */}
+      {selectedDetailCarparkNo && (
+        <CarparkDetailPage
+          carParkNo={selectedDetailCarparkNo}
+          initialDetails={(() => {
+            const cp = recommendedCarparks.find((c) => c.carParkNo === selectedDetailCarparkNo);
+            if (!cp) return undefined;
+            return {
+              carpark: {
+                carParkNo: cp.carParkNo || selectedDetailCarparkNo,
+                address: cp.name,
+                latitude: cp.latitude ?? 1.352,
+                longitude: cp.longitude ?? 103.836,
+                carParkType: (cp.carparkType as 'Surface' | 'Basement' | 'Multi-storey' | 'Covered') || 'Multi-storey',
+                isSheltered: cp.isSheltered ?? true,
+                totalLots: cp.totalLots,
+                freeParking: 'SUN & PH FR 7AM-10.30PM',
+                nightParking: 'YES',
+                hasEvCharging: Boolean(cp.hasEvCharging),
+                parkingSystem: 'Electronic',
+                postalCode: '579837',
+                parkingCost: cp.parkingCost ?? 0.6,
+                updatedAt: new Date().toISOString(),
+              },
+              availability: {
+                availableLots: cp.availableLots,
+                totalLots: cp.totalLots,
+                status: cp.availableLots >= 36 ? 'High' : cp.availableLots >= 12 ? 'Moderate' : 'Low',
+                lastUpdated: new Date().toISOString(),
+                isStale: false,
+              },
+            };
+          })()}
+          onBack={() => setSelectedDetailCarparkNo(null)}
+          onNavigate={() => {
+            const cp = recommendedCarparks.find(
+              (c) => c.carParkNo === selectedDetailCarparkNo
+            );
+            if (cp) {
+              handleNavigateToCarpark(cp);
+            } else {
+              getCarparkDetails(selectedDetailCarparkNo)
+                .then((d) => {
+                  setCarparkLocation({
+                    lat: d.carpark.latitude,
+                    lng: d.carpark.longitude,
+                    name: d.carpark.address || d.carpark.carParkNo,
+                    availableLots: d.availability.availableLots,
+                  });
+                  setIsSheetVisible(true);
+                  setShowCarparksList(false);
+                })
+                .catch(() => {
+                  setIsSheetVisible(true);
+                  setShowCarparksList(false);
+                });
+            }
+            setSelectedDetailCarparkNo(null);
+          }}
         />
       )}
     </div>

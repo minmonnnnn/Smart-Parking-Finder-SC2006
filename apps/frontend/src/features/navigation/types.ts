@@ -30,5 +30,6 @@ export type SearchTargetMode = 'origin' | 'carpark' | 'destination';
 
 export interface NavigationPageProps {
   onBack?: () => void;
+  initialCarparkNo?: string | null;
 }
 

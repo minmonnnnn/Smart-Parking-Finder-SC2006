@@ -16,10 +16,8 @@
   height: 760px;
   max-height: 96vh;
   margin: 12px auto;
-  /* border-radius: 40px; */
   overflow: hidden;
   position: relative;
-  /* box-shadow: 0 20px 48px rgba(0, 0, 0, 0.2), 0 0 0 10px #1E293B; */
   background: #E5E7EB;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   box-sizing: border-box;
@@ -51,13 +49,13 @@
   font-size: 12px;
 }
 
-/* Floating top actions row (Hamburger + 3 dots) */
+/* Floating top actions row (Hamburger + 3 dots) — positioned at top: 14px */
 .topHeaderRow {
   position: absolute;
-  top: 36px;
+  top: 14px;
   left: 16px;
   right: 16px;
-  z-index: 20;
+  z-index: 24;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -83,6 +81,15 @@
 .iconButton:hover {
   background: #FFFFFF;
   transform: scale(1.05);
+}
+
+/* Floating Min's Search Bar Wrapper — Moved up cleanly to top: 56px */
+.floatingSearchBarWrapper {
+  position: absolute;
+  top: 30px;
+  left: 0;
+  right: 0;
+  z-index: 22;
 }
 
 /* Floating Search and Target Selection Container */
@@ -190,24 +197,39 @@
   gap: 8px;
 }
 
-/* Floating Navigation Bottom Sheet (Xavier's Scope) */
+/* Floating Navigation Bottom Sheet (Xavier's Scope - SRS Navigation Mockup) */
 .bottomSheet {
   position: absolute;
-  bottom: 66px;
-  left: 12px;
-  right: 12px;
+  bottom: 16px;
+  left: 14px;
+  right: 14px;
   z-index: 20;
   background: #FFFFFF;
-  border-radius: 20px;
-  padding: 8px 16px 14px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 24px;
+  padding: 12px 18px 22px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.05);
   text-align: left;
   transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+
+.bottomSheetDragging {
+  transition: none !important;
+}
+
+.dragZone {
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+}
+
+.dragZone:active {
+  cursor: grabbing;
 }
 
 .sheetCollapsed {
-  padding-bottom: 10px;
+  padding: 10px 18px 12px;
 }
 
 .sheetHandle {
@@ -215,13 +237,14 @@
   height: 4px;
   background: #D1D5DB;
   border-radius: 2px;
-  margin: 0 auto 8px;
+  margin: 0 auto 10px;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background 0.15s, transform 0.15s;
 }
 
 .sheetHandle:hover {
   background: #9CA3AF;
+  transform: scaleY(1.3);
 }
 
 .sheetHeader {
@@ -230,6 +253,169 @@
   align-items: center;
   cursor: pointer;
   user-select: none;
+}
+
+.headerRightActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.collapseToggleBtn {
+  background: #F1F5F9;
+  border: none;
+  font-size: 11px;
+  color: #64748B;
+  cursor: pointer;
+  padding: 5px 8px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  line-height: 1;
+}
+
+.collapseToggleBtn:hover {
+  background: #E2E8F0;
+  color: #0F172A;
+}
+
+.carparkTitle {
+  font-size: 19px;
+  font-weight: 800;
+  color: #0F172A;
+  letter-spacing: -0.3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 8px;
+}
+
+.lotsBadge {
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  background: #D1FAE5;
+  color: #059669;
+  padding: 5px 10px;
+  border-radius: 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.sheetDivider {
+  height: 1px;
+  background-color: #F1F5F9;
+  margin: 14px 0 14px;
+}
+
+.metricsGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.metricCard {
+  background: #F8F9FE;
+  border-radius: 14px;
+  padding: 14px 16px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.metricValue {
+  font-size: 17px;
+  font-weight: 800;
+  color: #0F172A;
+  margin-bottom: 3px;
+}
+
+.metricLabel {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #64748B;
+  white-space: nowrap;
+}
+
+.weatherAlertCard {
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.weatherAlertIcon {
+  width: 24px;
+  height: 24px;
+  color: #DC2626;
+  flex-shrink: 0;
+}
+
+.weatherAlertText {
+  font-size: 13px;
+  font-weight: 600;
+  color: #B91C1C;
+  line-height: 1.35;
+  text-align: left;
+}
+
+.weatherInfoCard {
+  background: #F0F9FF;
+  border: 1px solid #BAE6FD;
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.weatherInfoIcon {
+  width: 22px;
+  height: 22px;
+  color: #0284C7;
+  flex-shrink: 0;
+}
+
+.weatherInfoText {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0369A1;
+  line-height: 1.35;
+  text-align: left;
+}
+
+.cancelNavButton {
+  width: 100%;
+  background: #B91C1C;
+  color: #FFFFFF;
+  border: none;
+  padding: 14px 18px;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(185, 28, 28, 0.25);
+  transition: background-color 0.15s ease, transform 0.1s ease;
+  text-align: center;
+  display: block;
+}
+
+.cancelNavButton:hover {
+  background: #991B1B;
+}
+
+.cancelNavButton:active {
+  transform: translateY(1px);
 }
 
 .sheetHeaderExpanded {
@@ -610,7 +796,7 @@
 .myLocationButton {
   position: absolute;
   right: 16px;
-  bottom: 275px;
+  bottom: 130px;
   width: 44px;
   height: 44px;
   border-radius: 50%;
@@ -629,6 +815,10 @@
 
 .myLocationButtonCollapsed {
   bottom: 130px;
+}
+
+.myLocationButtonSheetHidden {
+  bottom: 24px;
 }
 
 .myLocationButton:hover {
@@ -745,6 +935,109 @@
 .tripRowDest {
   margin-top: 3px;
 }
+
+/* Recommended Carparks Panel Overlay */
+.recommendedCarparksPanel {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-height: 540px;
+  background: #FFFFFF;
+  border-top-left-radius: 24px;
+  border-top-right-radius: 24px;
+  box-shadow: 0 -6px 25px rgba(0, 0, 0, 0.16);
+  z-index: 35;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 14px 20px;
+  box-sizing: border-box;
+  animation: slideUpPanel 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUpPanel {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.recommendedCarparksHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 4px 10px;
+  border-bottom: 1px solid #E5E7EB;
+  margin-bottom: 12px;
+}
+
+.recommendedCarparksTitle {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #111827;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  padding-right: 8px;
+}
+
+.recommendedCarparksCount {
+  font-size: 13px;
+  font-weight: 600;
+  color: #4B5563;
+}
+
+.closeCarparksButton {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid #E5E7EB;
+  background: #F3F4F6;
+  color: #4B5563;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.closeCarparksButton:hover {
+  background: #E5E7EB;
+  color: #111827;
+}
+
+.recommendedCarparksScrollArea {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 2px 2px 12px;
+  max-height: 450px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.recommendedCarparksLoading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 16px;
+  gap: 12px;
+  font-size: 13.5px;
+  color: #6B7280;
+  font-weight: 600;
+}
+
+.myLocationButtonCarparksList {
+  bottom: 550px;
+}
+
 
 
 

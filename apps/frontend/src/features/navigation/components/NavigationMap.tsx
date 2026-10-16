@@ -10,6 +10,8 @@ interface NavigationMapProps {
   walkingPath?: google.maps.LatLng[] | { lat: number; lng: number }[];
   isLocating: boolean;
   isSheetCollapsed: boolean;
+  isSheetVisible?: boolean;
+  showCarparksList?: boolean;
   onGetCurrentLocation: () => void;
 }
 
@@ -21,6 +23,8 @@ export function NavigationMap({
   walkingPath,
   isLocating,
   isSheetCollapsed,
+  isSheetVisible = true,
+  showCarparksList = false,
   onGetCurrentLocation,
 }: NavigationMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
@@ -135,19 +139,19 @@ export function NavigationMap({
 
   // Synchronize driving route path with polyline
   useEffect(() => {
-    if (drivingPolylineRef.current && drivingPath) {
-      drivingPolylineRef.current.setPath(drivingPath);
+    if (drivingPolylineRef.current) {
+      drivingPolylineRef.current.setPath(drivingPath || []);
     }
   }, [drivingPath]);
 
   // Synchronize walking route path with polyline
   useEffect(() => {
-    if (walkingPolylineRef.current && walkingPath) {
-      walkingPolylineRef.current.setPath(walkingPath);
+    if (walkingPolylineRef.current) {
+      walkingPolylineRef.current.setPath(walkingPath || []);
     }
   }, [walkingPath]);
 
-  // Synchronize marker positions and map camera bounds
+  // Synchronize marker positions, visibility, and map camera bounds
   useEffect(() => {
     if (originMarkerRef.current) {
       originMarkerRef.current.setPosition({ lat: origin.lat, lng: origin.lng });
@@ -156,20 +160,32 @@ export function NavigationMap({
     if (carparkMarkerRef.current) {
       carparkMarkerRef.current.setPosition({ lat: carpark.lat, lng: carpark.lng });
       carparkMarkerRef.current.setTitle(carpark.name);
+      carparkMarkerRef.current.setVisible(isSheetVisible);
     }
     if (destMarkerRef.current) {
       destMarkerRef.current.setPosition({ lat: destination.lat, lng: destination.lng });
       destMarkerRef.current.setTitle(destination.name);
+      destMarkerRef.current.setVisible(isSheetVisible || Boolean(showCarparksList));
     }
 
     if (mapInstanceRef.current && window.google?.maps) {
-      const bounds = new window.google.maps.LatLngBounds();
-      bounds.extend({ lat: origin.lat, lng: origin.lng });
-      bounds.extend({ lat: carpark.lat, lng: carpark.lng });
-      bounds.extend({ lat: destination.lat, lng: destination.lng });
-      mapInstanceRef.current.fitBounds(bounds, 50);
+      if (isSheetVisible) {
+        const bounds = new window.google.maps.LatLngBounds();
+        bounds.extend({ lat: origin.lat, lng: origin.lng });
+        bounds.extend({ lat: carpark.lat, lng: carpark.lng });
+        bounds.extend({ lat: destination.lat, lng: destination.lng });
+        mapInstanceRef.current.fitBounds(bounds, 50);
+      } else if (showCarparksList) {
+        const bounds = new window.google.maps.LatLngBounds();
+        bounds.extend({ lat: origin.lat, lng: origin.lng });
+        bounds.extend({ lat: destination.lat, lng: destination.lng });
+        mapInstanceRef.current.fitBounds(bounds, 60);
+      } else {
+        mapInstanceRef.current.setCenter({ lat: origin.lat, lng: origin.lng });
+        mapInstanceRef.current.setZoom(14);
+      }
     }
-  }, [origin, carpark, destination]);
+  }, [origin, carpark, destination, isSheetVisible, showCarparksList]);
 
   return (
     <>
@@ -195,7 +211,13 @@ export function NavigationMap({
       <button
         type="button"
         className={`${styles.myLocationButton} ${isLocating ? styles.locating : ''} ${
-          isSheetCollapsed ? styles.myLocationButtonCollapsed : ''
+          showCarparksList
+            ? styles.myLocationButtonCarparksList
+            : !isSheetVisible
+            ? styles.myLocationButtonSheetHidden
+            : isSheetCollapsed
+            ? styles.myLocationButtonCollapsed
+            : ''
         }`}
         onClick={onGetCurrentLocation}
         title="Get Current Location (GPS)"

@@ -81,7 +81,12 @@ function AppShell() {
         )
 
       case 'navigation':
-        return <NavigationPage onBack={() => navigate('search')} />
+        return (
+          <NavigationPage
+            onBack={() => navigate('search')}
+            initialCarparkNo={selectedCarParkNo}
+          />
+        )
     }
   })()
 

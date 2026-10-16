@@ -52,6 +52,17 @@ describe('CarparkCard', () => {
     expect(handleNavigate).toHaveBeenCalledWith(dummyCarpark);
   });
 
+  it('calls onSelect when card body is clicked', () => {
+    const handleSelect = vi.fn();
+    render(<CarparkCard cp={dummyCarpark} onSelect={handleSelect} />);
+
+    const titleElement = screen.getByText('Blk 283 Bishan Street 22');
+    fireEvent.click(titleElement);
+
+    expect(handleSelect).toHaveBeenCalledTimes(1);
+    expect(handleSelect).toHaveBeenCalledWith(dummyCarpark);
+  });
+
   it('formats distance in meters and kilometers correctly', () => {
     expect(formatDistance(500)).toBe('500 m');
     expect(formatDistance(1200)).toBe('1.2 km');

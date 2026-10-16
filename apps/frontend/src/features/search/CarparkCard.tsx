@@ -11,6 +11,7 @@ export type { CarparkCardData };
 export interface CarparkCardProps {
   cp: CarparkCardData;
   onNavigate?: (cp: CarparkCardData) => void;
+  onSelect?: (cp: CarparkCardData) => void;
 }
 
 function Badge({ children }: { children: ReactNode }) {
@@ -44,7 +45,7 @@ const navigateIcon = (
   </svg>
 );
 
-export function CarparkCard({ cp, onNavigate }: CarparkCardProps) {
+export function CarparkCard({ cp, onNavigate, onSelect }: CarparkCardProps) {
   const pct = progressPercent(cp.availableLots, cp.totalLots);
   const tone = availabilityTone(Math.round(pct));
 
@@ -58,7 +59,22 @@ export function CarparkCard({ cp, onNavigate }: CarparkCardProps) {
           gap: vars.space[2],
         }}
       >
-        <div style={{ minWidth: 0, flex: 1 }}>
+        <div
+          onClick={() => onSelect?.(cp)}
+          role={onSelect ? 'button' : undefined}
+          tabIndex={onSelect ? 0 : undefined}
+          onKeyDown={(e) => {
+            if (onSelect && (e.key === 'Enter' || e.key === ' ')) {
+              e.preventDefault();
+              onSelect(cp);
+            }
+          }}
+          style={{
+            minWidth: 0,
+            flex: 1,
+            cursor: onSelect ? 'pointer' : 'default',
+          }}
+        >
           <div
             style={{
               fontWeight: vars.fontWeight.semibold,
@@ -98,7 +114,10 @@ export function CarparkCard({ cp, onNavigate }: CarparkCardProps) {
           </div>
         </div>
         <button
-          onClick={() => onNavigate?.(cp)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onNavigate?.(cp);
+          }}
           aria-label={`Navigate to ${cp.name}`}
           style={{
             display: 'inline-flex',

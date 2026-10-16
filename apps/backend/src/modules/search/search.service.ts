@@ -235,7 +235,7 @@ export async function getCarparkDetails(
   const carpark = await getCarparkByNo(client, carParkNo);
   if (!carpark) return null;
 
-  const cached = getAvailabilityByCarParkNo(carParkNo);
+  const cached = getAvailabilityByCarParkNo(carpark.carParkNo);
   const availability = cached ?? {
     availableLots: 0,
     totalLots: 0,

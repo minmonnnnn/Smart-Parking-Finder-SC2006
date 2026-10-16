@@ -150,28 +150,80 @@ function FavouritesSession({ token, onSelect, onSearch }: FavouritesPageProps & 
         <button type="button" className="favourites-primary" onClick={onSearch}>Search destinations</button>
       </div>}
       {!loading && !loadError && visible && visible.length > 0 && <ul className="favourites-list">
-        {visible.map((favourite) => <li className="favourite-card" key={favourite.id}>
-          <div className="favourite-pin" aria-hidden="true">⌖</div>
-          <div className="favourite-main">
-            {editingId === favourite.id ? <form className="favourite-rename" onSubmit={(event) => void saveName(event)}>
-              <label htmlFor={`favourite-name-${favourite.id}`}>Location name</label>
-              <input id={`favourite-name-${favourite.id}`} value={name} onChange={(event) => setName(event.target.value)} aria-invalid={!!renameError} autoFocus />
-              {renameError && <p className="favourites-error" role="alert">{renameError}</p>}
-              <div className="favourite-actions">
-                <button type="button" className="favourites-secondary" onClick={cancelRename} disabled={saving}>Cancel rename</button>
-                <button type="submit" className="favourites-primary" disabled={saving}>{saving ? 'Saving…' : 'Save name'}</button>
-              </div>
-            </form> : <>
-              <h2>{favourite.locationName}</h2>
-              <p className="favourite-address">{favourite.address}</p>
-              <div className="favourite-actions">
-                <button type="button" className="favourites-primary" onClick={() => onSelect(favourite)}>Use {favourite.locationName} as destination</button>
-                <button type="button" className="favourites-secondary" onClick={() => startRename(favourite)}>Rename {favourite.locationName}</button>
-                <button type="button" className="favourites-text-button" disabled={deletion.deletionBusy} onClick={(event) => { deleteTriggerRef.current = event.currentTarget; setConfirming(favourite) }}>Delete {favourite.locationName}</button>
-              </div>
-            </>}
-          </div>
-        </li>)}
+        {visible.map((favourite) => (
+          <li
+            className="favourite-card"
+            key={favourite.id}
+            tabIndex={0}
+            role="button"
+            aria-label={`View details for ${favourite.locationName}`}
+            onClick={() => {
+              if (editingId !== favourite.id) {
+                onSelect(favourite)
+              }
+            }}
+            onKeyDown={(e) => {
+              if (editingId !== favourite.id && (e.key === 'Enter' || e.key === ' ')) {
+                e.preventDefault()
+                onSelect(favourite)
+              }
+            }}
+          >
+            <div className="favourite-pin" aria-hidden="true">⌖</div>
+            <div className="favourite-main">
+              {editingId === favourite.id ? (
+                <form
+                  className="favourite-rename"
+                  onSubmit={(event) => void saveName(event)}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <label htmlFor={`favourite-name-${favourite.id}`}>Location name</label>
+                  <input
+                    id={`favourite-name-${favourite.id}`}
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    aria-invalid={!!renameError}
+                    autoFocus
+                  />
+                  {renameError && <p className="favourites-error" role="alert">{renameError}</p>}
+                  <div className="favourite-actions">
+                    <button type="button" className="favourites-secondary" onClick={cancelRename} disabled={saving}>Cancel rename</button>
+                    <button type="submit" className="favourites-primary" disabled={saving}>{saving ? 'Saving…' : 'Save name'}</button>
+                  </div>
+                </form>
+              ) : (
+                <>
+                  <h2>{favourite.locationName}</h2>
+                  <p className="favourite-address">{favourite.address}</p>
+                  <div className="favourite-actions">
+                    <button
+                      type="button"
+                      className="favourites-secondary"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        startRename(favourite)
+                      }}
+                    >
+                      Rename {favourite.locationName}
+                    </button>
+                    <button
+                      type="button"
+                      className="favourites-text-button"
+                      disabled={deletion.deletionBusy}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        deleteTriggerRef.current = event.currentTarget
+                        setConfirming(favourite)
+                      }}
+                    >
+                      Delete {favourite.locationName}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </li>
+        ))}
       </ul>}
       {deletion.error && <p className="favourites-error favourites-delete-error" role="alert">{deletion.error}</p>}
     </section>

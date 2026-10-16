@@ -50,6 +50,14 @@ function makeRouteKey(oLat: number, oLng: number, dLat: number, dLng: number): s
   return `${oLat.toFixed(4)},${oLng.toFixed(4)}->${dLat.toFixed(4)},${dLng.toFixed(4)}`;
 }
 
+function getRoutingApiKey(): string {
+  const rawKey = process.env.GOOGLE_MAPS_API_KEY;
+  if (!rawKey) {
+    throw new Error('GOOGLE_MAPS_API_KEY is not set');
+  }
+  return rawKey.split('#')[0]!.trim();
+}
+
 /**
  * Calculates driving route from origin to destination/carpark.
  * Fulfills FR21-FR23, FR28, FR30, FR31, FR34.
@@ -66,10 +74,7 @@ export async function getDrivingRoute(
     return cached.data;
   }
 
-  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
-  if (!apiKey) {
-    throw new Error('GOOGLE_MAPS_API_KEY is not set');
-  }
+  const apiKey = getRoutingApiKey();
 
   try {
     const response = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
@@ -175,10 +180,7 @@ export async function getWalkingRoute(
     return cached.data;
   }
 
-  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
-  if (!apiKey) {
-    throw new Error('GOOGLE_MAPS_API_KEY is not set');
-  }
+  const apiKey = getRoutingApiKey();
 
   try {
     const response = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {

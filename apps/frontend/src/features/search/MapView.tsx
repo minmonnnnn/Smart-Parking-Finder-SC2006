@@ -1,6 +1,6 @@
 import React from 'react'
 import { GoogleMap, useLoadScript } from '@react-google-maps/api'
-import { GOOGLE_MAPS_SCRIPT_ID, GOOGLE_MAPS_LIBRARIES } from '../../lib/googleMaps'
+import { GOOGLE_MAPS_SCRIPT_ID, GOOGLE_MAPS_LIBRARIES, getGoogleMapsApiKey } from '../../lib/googleMaps'
 
 const SINGAPORE_CENTER = { lat: 1.3521, lng: 103.8198 }
 
@@ -32,7 +32,7 @@ function MapFallback({ compact, error }: { compact: boolean; error?: boolean }) 
 export function MapView({ center = SINGAPORE_CENTER, zoom = 13, compact = false }: MapViewProps) {
   const { isLoaded, loadError } = useLoadScript({
     id: GOOGLE_MAPS_SCRIPT_ID,
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY ?? '',
+    googleMapsApiKey: getGoogleMapsApiKey(),
     libraries: GOOGLE_MAPS_LIBRARIES,
   })
 

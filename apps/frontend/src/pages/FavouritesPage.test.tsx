@@ -75,7 +75,7 @@ describe('FavouritesPage', () => {
     const { onSelect } = renderPage()
     const user = userEvent.setup()
     await screen.findByText('1 Main St')
-    await user.click(screen.getByRole('button', { name: 'Use Home as destination' }))
+    await user.click(screen.getByRole('button', { name: 'View details for Home' }))
     expect(onSelect).toHaveBeenCalledExactlyOnceWith(home)
   })
 

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import styles from '../../../pages/NavigationPage.module.css';
 import type { PlaceItem, SearchTargetMode } from '../types';
+import { getGoogleMapsApiKey } from '../../../lib/googleMaps';
 import { POPULAR_ORIGINS, POPULAR_CARPARKS, POPULAR_DESTINATIONS } from '../constants';
 
 interface RouteSearchCardProps {
@@ -24,7 +25,7 @@ export function RouteSearchCard({
   const [showDropdown, setShowDropdown] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
 
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+  const apiKey = getGoogleMapsApiKey();
 
   const targetPresetList =
     searchTarget === 'origin'

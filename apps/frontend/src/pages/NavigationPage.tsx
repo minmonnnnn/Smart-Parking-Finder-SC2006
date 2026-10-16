@@ -18,6 +18,7 @@ import {
 // Feature Hooks, Constants & Types
 import { useNavigationRoutes } from '../features/navigation/hooks/useNavigationRoutes';
 import { useWeather } from '../features/navigation/hooks/weather';
+import { getGoogleMapsApiKey } from '../lib/googleMaps';
 import {
   SAMPLE_ORIGIN,
   DEFAULT_CARPARK,
@@ -31,16 +32,41 @@ import type {
   SearchTargetMode,
 } from '../features/navigation/types';
 
-export function NavigationPage({ onBack, initialCarparkNo }: NavigationPageProps) {
+export function NavigationPage({
+  onBack,
+  initialCarparkNo,
+  initialCarparkDetails,
+  onNavigate,
+}: NavigationPageProps) {
   // Navigation Target Coordinates
+  const initialCp = initialCarparkDetails
+    ? {
+        lat: initialCarparkDetails.carpark.latitude,
+        lng: initialCarparkDetails.carpark.longitude,
+        name: initialCarparkDetails.carpark.address || initialCarparkDetails.carpark.carParkNo,
+        availableLots: initialCarparkDetails.availability.availableLots,
+      }
+    : DEFAULT_CARPARK;
+
   const [originLocation, setOriginLocation] = useState(SAMPLE_ORIGIN);
-  const [carparkLocation, setCarparkLocation] = useState(DEFAULT_CARPARK);
-  const [destinationLocation, setDestinationLocation] = useState(DEFAULT_DESTINATION);
+  const [carparkLocation, setCarparkLocation] = useState(initialCp);
+  const [destinationLocation, setDestinationLocation] = useState<PlaceItem>(
+    initialCarparkDetails
+      ? {
+          placeId: initialCarparkDetails.carpark.carParkNo,
+          main: initialCarparkDetails.carpark.address || initialCarparkDetails.carpark.carParkNo,
+          sub: 'Carpark Destination',
+          lat: initialCarparkDetails.carpark.latitude,
+          lng: initialCarparkDetails.carpark.longitude,
+        }
+      : DEFAULT_DESTINATION
+  );
 
   // UI View States
   const [isLocating, setIsLocating] = useState(false);
   const [isSheetCollapsed, setIsSheetCollapsed] = useState(false);
   const [isSheetVisible, setIsSheetVisible] = useState(true);
+  const [isSideNavOpen, setIsSideNavOpen] = useState(false);
   const [, setSearchTarget] = useState<SearchTargetMode>('destination');
 
   // Recommended Carparks List & Detail View States
@@ -58,7 +84,7 @@ export function NavigationPage({ onBack, initialCarparkNo }: NavigationPageProps
   const [pricingAsc, setPricingAsc] = useState(false);
   const [availabilityFilter, setAvailabilityFilter] = useState<Set<AvailabilityLevel>>(new Set());
 
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+  const apiKey = getGoogleMapsApiKey();
 
   // 1. Auto-acquire live GPS position on mount so Pin A starts as current location
   useEffect(() => {
@@ -91,11 +117,19 @@ export function NavigationPage({ onBack, initialCarparkNo }: NavigationPageProps
       getCarparkDetails(initialCarparkNo)
         .then((d) => {
           if (cancelled) return;
+          const cpName = d.carpark.address || d.carpark.carParkNo;
           setCarparkLocation({
             lat: d.carpark.latitude,
             lng: d.carpark.longitude,
-            name: d.carpark.address || d.carpark.carParkNo,
+            name: cpName,
             availableLots: d.availability.availableLots,
+          });
+          setDestinationLocation({
+            placeId: d.carpark.carParkNo,
+            main: cpName,
+            sub: 'Carpark Destination',
+            lat: d.carpark.latitude,
+            lng: d.carpark.longitude,
           });
           setIsSheetVisible(true);
           setShowCarparksList(false);
@@ -286,7 +320,7 @@ export function NavigationPage({ onBack, initialCarparkNo }: NavigationPageProps
     let fallbackItems: CarparkCardData[] = POPULAR_CARPARKS.filter(
       (cp): cp is PlaceItem & { lat: number; lng: number } =>
         typeof cp.lat === 'number' && typeof cp.lng === 'number'
-    ).map((cp) => {
+    ).map((cp, idx) => {
       const dist = Math.round(Math.hypot((cp.lat - destLat) * 111000, (cp.lng - destLng) * 111000));
       return {
         carParkNo: cp.placeId || cp.main,
@@ -433,130 +467,211 @@ export function NavigationPage({ onBack, initialCarparkNo }: NavigationPageProps
 
   return (
     <div className={styles.phoneFrame}>
-      {/* Floating Top Actions Row */}
-      <div className={styles.topHeaderRow}>
+      {/* Top Actions Header Bar — positioned strictly ABOVE the map */}
+      <header className={styles.topHeaderBar}>
         <button
-          className={styles.iconButton}
-          onClick={onBack || (() => window.history.back())}
-          title="Menu / Return"
+          type="button"
+          className={styles.headerButton}
+          onClick={() => setIsSideNavOpen((prev) => !prev)}
+          aria-label="Navigation menu"
+          aria-expanded={isSideNavOpen}
+          title="Navigation menu"
         >
-          ☰
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
         </button>
-        <button className={styles.iconButton} title="More Options">
-          •••
+        <button
+          type="button"
+          className={styles.headerButton}
+          onClick={onBack}
+          title="More options"
+          aria-label="More options"
+        >
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            aria-hidden="true"
+          >
+            <circle cx="5" cy="12" r="2" />
+            <circle cx="12" cy="12" r="2" />
+            <circle cx="19" cy="12" r="2" />
+          </svg>
         </button>
-      </div>
+      </header>
 
-      {/* Min's Search Bar with Filter Chips & Autocomplete (Moved up cleanly) */}
-      <div className={styles.floatingSearchBarWrapper}>
-        <SearchBar
-          query={searchQuery}
-          onChange={setSearchQuery}
-          onSearch={() => {
-            if (suggestions.length > 0) {
-              handleSelectPlace(suggestions[0]);
-            }
-          }}
-          evFilter={evFilter}
-          onEvFilter={setEvFilter}
-          shelteredFilter={shelteredFilter}
-          onShelteredFilter={setShelteredFilter}
-          pricingAsc={pricingAsc}
-          onPricingAsc={setPricingAsc}
-          availabilityFilter={availabilityFilter}
-          onAvailabilityFilter={toggleAvailability}
-          onClearFilters={clearFilters}
-          placeholder={`Search destination (current: ${destinationLocation.name})`}
-          suggestions={suggestions}
-          onSelectSuggestion={(place) => {
-            handleSelectPlace(place);
-          }}
-          onGetCurrentLocation={handleGetCurrentLocation}
-          isSearching={isSearching}
-        />
-      </div>
-
-      {/* Full-Bleed Google Maps Canvas */}
-      <NavigationMap
-        origin={originLocation}
-        carpark={carparkLocation}
-        destination={destinationLocation}
-        drivingPath={isSheetVisible ? activeDrivingRoute?.path : undefined}
-        walkingPath={isSheetVisible ? walkingInfo?.path : undefined}
-        isLocating={isLocating}
-        isSheetCollapsed={isSheetCollapsed}
-        isSheetVisible={isSheetVisible}
-        showCarparksList={showCarparksList}
-        onGetCurrentLocation={handleGetCurrentLocation}
-      />
-
-      {/* Recommended Carparks List Panel using CarparkCard component */}
-      {showCarparksList && (
-        <div className={styles.recommendedCarparksPanel}>
-          <div className={styles.sheetHandle} />
-          <div className={styles.recommendedCarparksHeader}>
-            <div className={styles.recommendedCarparksTitle}>
-              <span className={styles.recommendedCarparksCount}>
-                {isLoadingCarparks
-                  ? 'Finding carparks...'
-                  : `${recommendedCarparks.length} carparks near ${destinationLocation.name}`}
-              </span>
-            </div>
-            <button
-              className={styles.closeCarparksButton}
-              onClick={() => setShowCarparksList(false)}
-              aria-label="Close carparks list"
-            >
-              ✕
-            </button>
-          </div>
-
-          {isLoadingCarparks ? (
-            <div className={styles.recommendedCarparksLoading}>
-              <span>Finding recommended carparks near {destinationLocation.name}...</span>
-            </div>
-          ) : (
-            <div className={styles.recommendedCarparksScrollArea}>
-              {recommendedCarparks.map((cp, idx) => (
-                <CarparkCard
-                  key={cp.carParkNo || `${cp.name}-${idx}`}
-                  cp={cp}
-                  onSelect={(cardData) => {
-                    if (cardData.carParkNo) {
-                      setSelectedDetailCarparkNo(cardData.carParkNo);
-                    }
-                  }}
-                  onNavigate={handleNavigateToCarpark}
-                />
-              ))}
-            </div>
-          )}
+      {/* Main Map & Navigation Body strictly below the header */}
+      <div className={styles.mapArea}>
+        {/* Min's Search Bar with Filter Chips & Autocomplete */}
+        <div className={styles.floatingSearchBarWrapper}>
+          <SearchBar
+            query={searchQuery}
+            onChange={setSearchQuery}
+            onSearch={() => {
+              if (suggestions.length > 0) {
+                handleSelectPlace(suggestions[0]);
+              }
+            }}
+            evFilter={evFilter}
+            onEvFilter={setEvFilter}
+            shelteredFilter={shelteredFilter}
+            onShelteredFilter={setShelteredFilter}
+            pricingAsc={pricingAsc}
+            onPricingAsc={setPricingAsc}
+            availabilityFilter={availabilityFilter}
+            onAvailabilityFilter={toggleAvailability}
+            onClearFilters={clearFilters}
+            placeholder={`Search destination (current: ${destinationLocation.main || destinationLocation.name || 'Destination'})`}
+            suggestions={suggestions}
+            onSelectSuggestion={(place) => {
+              handleSelectPlace(place);
+            }}
+            onGetCurrentLocation={handleGetCurrentLocation}
+            isSearching={isSearching}
+          />
         </div>
-      )}
 
-      {/* Floating Navigation Bottom Sheet */}
-      {isSheetVisible && (
-        <NavigationBottomSheet
+        {/* Full-Bleed Google Maps Canvas */}
+        <NavigationMap
           origin={originLocation}
           carpark={carparkLocation}
           destination={destinationLocation}
-          drivingRoutes={drivingRoutes}
-          activeRouteIndex={activeRouteIndex}
-          onSelectRoute={setActiveRouteIndex}
-          walkingInfo={walkingInfo}
-          isCalculating={isCalculatingRoute}
+          drivingPath={isSheetVisible ? activeDrivingRoute?.path : undefined}
+          walkingPath={isSheetVisible ? walkingInfo?.path : undefined}
+          isLocating={isLocating}
           isSheetCollapsed={isSheetCollapsed}
-          onToggleCollapse={() => setIsSheetCollapsed((prev) => !prev)}
-          onOpenTargetSearch={(target) => setSearchTarget(target)}
-          onCancelNav={handleCancelNavigation}
-          weatherInfo={liveWeather}
+          isSheetVisible={isSheetVisible}
+          showCarparksList={showCarparksList}
+          onGetCurrentLocation={handleGetCurrentLocation}
         />
+
+        {/* Recommended Carparks List Panel using CarparkCard component */}
+        {showCarparksList && (
+          <div className={styles.recommendedCarparksPanel}>
+            <div className={styles.sheetHandle} />
+            <div className={styles.recommendedCarparksHeader}>
+              <div className={styles.recommendedCarparksTitle}>
+                <span className={styles.recommendedCarparksCount}>
+                  {isLoadingCarparks
+                    ? 'Finding carparks...'
+                    : `${recommendedCarparks.length} carparks near ${destinationLocation.name}`}
+                </span>
+              </div>
+              <button
+                className={styles.closeCarparksButton}
+                onClick={() => setShowCarparksList(false)}
+                aria-label="Close carparks list"
+              >
+                ✕
+              </button>
+            </div>
+
+            {isLoadingCarparks ? (
+              <div className={styles.recommendedCarparksLoading}>
+                <span>Finding recommended carparks near {destinationLocation.name}...</span>
+              </div>
+            ) : (
+              <div className={styles.recommendedCarparksScrollArea}>
+                {recommendedCarparks.map((cp, idx) => (
+                  <CarparkCard
+                    key={cp.carParkNo || `${cp.name}-${idx}`}
+                    cp={cp}
+                    onSelect={(cardData) => {
+                      if (cardData.carParkNo) {
+                        setSelectedDetailCarparkNo(cardData.carParkNo);
+                      }
+                    }}
+                    onNavigate={handleNavigateToCarpark}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Floating Navigation Bottom Sheet */}
+        {isSheetVisible && (
+          <NavigationBottomSheet
+            origin={originLocation}
+            carpark={carparkLocation}
+            destination={destinationLocation}
+            drivingRoutes={drivingRoutes}
+            activeRouteIndex={activeRouteIndex}
+            onSelectRoute={setActiveRouteIndex}
+            walkingInfo={walkingInfo}
+            isCalculating={isCalculatingRoute}
+            isSheetCollapsed={isSheetCollapsed}
+            onToggleCollapse={() => setIsSheetCollapsed((prev) => !prev)}
+            onOpenTargetSearch={(target) => setSearchTarget(target)}
+            onCancelNav={handleCancelNavigation}
+            weatherInfo={liveWeather}
+          />
+        )}
+      </div>
+
+      {/* Side Navigation Drawer Overlay */}
+      {isSideNavOpen && (
+        <div
+          className={styles.sideNavOverlay}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Side navigation"
+          onClick={() => setIsSideNavOpen(false)}
+        >
+          <div
+            className={styles.sideNavDrawer}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.sideNavBanner} />
+            <div className={styles.sideNavMenu}>
+              <button
+                type="button"
+                className={styles.sideNavItem}
+                onClick={() => {
+                  setIsSideNavOpen(false);
+                  onNavigate?.('favourites');
+                }}
+              >
+                <svg
+                  className={styles.sideNavHeartIcon}
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                </svg>
+                <span className={styles.sideNavItemLabel}>Favourites</span>
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Carpark Detail Page Overlay */}
       {selectedDetailCarparkNo && (
         <CarparkDetailPage
           carParkNo={selectedDetailCarparkNo}
+          isOverlay
           initialDetails={(() => {
             const cp = recommendedCarparks.find((c) => c.carParkNo === selectedDetailCarparkNo);
             if (!cp) return undefined;

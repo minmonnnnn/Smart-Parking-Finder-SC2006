@@ -134,8 +134,12 @@ export function NavigationBottomSheet({
 
   // Format walking distance (e.g. 200m or 1.2 km)
   const walkingDist = walkingInfo?.distanceMeters ?? 200;
-  const formattedWalkDistance =
-    walkingDist >= 1000 ? `${(walkingDist / 1000).toFixed(1)} km` : `${walkingDist}m`;
+  const isDirectCarpark = walkingDist <= 50;
+  const formattedWalkDistance = isDirectCarpark
+    ? 'At Carpark'
+    : walkingDist >= 1000
+    ? `${(walkingDist / 1000).toFixed(1)} km`
+    : `${walkingDist}m`;
 
   return (
     <div
@@ -225,6 +229,8 @@ export function NavigationBottomSheet({
               <div className={styles.metricValue}>
                 {isCalculating
                   ? '...'
+                  : isDirectCarpark
+                  ? '0 min'
                   : `${walkingInfo?.durationMinutes ?? 2} mins`}
               </div>
               <div className={styles.metricLabel}>

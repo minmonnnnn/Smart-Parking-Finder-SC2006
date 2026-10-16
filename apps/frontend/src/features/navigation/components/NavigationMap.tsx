@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useLoadScript } from '@react-google-maps/api';
-import { GOOGLE_MAPS_SCRIPT_ID, GOOGLE_MAPS_LIBRARIES } from '../../../lib/googleMaps';
+import { GOOGLE_MAPS_SCRIPT_ID, GOOGLE_MAPS_LIBRARIES, getGoogleMapsApiKey } from '../../../lib/googleMaps';
 import styles from '../../../pages/NavigationPage.module.css';
 import { INITIAL_DRIVING_PATH, INITIAL_WALKING_PATH } from '../constants';
 
@@ -37,7 +37,7 @@ export function NavigationMap({
   const drivingPolylineRef = useRef<google.maps.Polyline | null>(null);
   const walkingPolylineRef = useRef<google.maps.Polyline | null>(null);
 
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+  const apiKey = getGoogleMapsApiKey();
 
   const { isLoaded, loadError } = useLoadScript({
     id: GOOGLE_MAPS_SCRIPT_ID,
@@ -137,10 +137,11 @@ export function NavigationMap({
       carparkMarkerRef.current.setTitle(carpark.name);
       carparkMarkerRef.current.setVisible(isSheetVisible);
     }
+    const isDirectCarpark = Math.hypot(carpark.lat - destination.lat, carpark.lng - destination.lng) < 0.0005;
     if (destMarkerRef.current) {
       destMarkerRef.current.setPosition({ lat: destination.lat, lng: destination.lng });
       destMarkerRef.current.setTitle(destination.name);
-      destMarkerRef.current.setVisible(isSheetVisible || Boolean(showCarparksList));
+      destMarkerRef.current.setVisible((isSheetVisible || Boolean(showCarparksList)) && !isDirectCarpark);
     }
 
     if (mapInstanceRef.current && window.google?.maps) {

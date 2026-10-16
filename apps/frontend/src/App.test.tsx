@@ -40,14 +40,15 @@ describe('App flow', () => {
     expect(await screen.findByDisplayValue(profile.name)).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Your profile.' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Favourites' }))
-    await user.click(await screen.findByRole('button', { name: 'Use Home as destination' }))
-    expect(screen.getByRole('status')).toHaveTextContent('Selected Home (1 Main St).')
+    await user.click(await screen.findByRole('button', { name: 'View details for Home' }))
+    expect(await screen.findByText('Location details')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Back' }))
+    expect(await screen.findByRole('heading', { name: 'Saved locations.' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Profile' }))
     expect(screen.getByRole('heading', { name: 'Your profile.' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Log out' }))
     expect(screen.getByRole('heading', { name: 'Welcome back.' })).toBeInTheDocument()
     expect(localStorage.getItem(AUTH_STORAGE_KEY)).toBeNull()
-    expect(screen.queryByText(/Selected Home/)).not.toBeInTheDocument()
   })
 
   it('restores a saved session to Profile and returns to sign in after account deletion', async () => {

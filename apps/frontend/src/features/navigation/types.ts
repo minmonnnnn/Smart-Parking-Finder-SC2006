@@ -3,6 +3,8 @@
  * Aligned with docs/API_CONTRACT.md and @smart-parking/shared-types
  */
 
+import type { CarparkDetails } from '@smart-parking/shared-types';
+
 export interface PlaceItem {
   placeId: string;
   main: string;
@@ -31,5 +33,7 @@ export type SearchTargetMode = 'origin' | 'carpark' | 'destination';
 export interface NavigationPageProps {
   onBack?: () => void;
   initialCarparkNo?: string | null;
+  initialCarparkDetails?: CarparkDetails | null;
+  onNavigate?: (page: 'search' | 'favourites' | 'profile' | 'navigation') => void;
 }
 

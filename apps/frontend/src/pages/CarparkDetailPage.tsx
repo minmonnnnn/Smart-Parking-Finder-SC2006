@@ -40,7 +40,7 @@ export function CarparkDetailPage({
   carParkNo: string
   initialDetails?: CarparkDetails
   onBack: () => void
-  onNavigate: () => void
+  onNavigate: (details?: CarparkDetails) => void
   isOverlay?: boolean
 }) {
   const { session } = useAuth()
@@ -375,7 +375,7 @@ export function CarparkDetailPage({
         >
           {isSaved ? '✓ Saved in Favourites' : 'Save to Favourites'}
         </button>
-        <button type="button" onClick={onNavigate} style={{
+        <button type="button" onClick={() => onNavigate(details ?? undefined)} style={{
           width: '100%', padding: vars.space[3], borderRadius: vars.radius.md,
           background: '#1d4ed8', color: '#fff', border: 'none',
           fontSize: vars.fontSize.md, fontWeight: vars.fontWeight.semibold,

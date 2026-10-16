@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { type CSSProperties, useEffect, useState } from 'react'
 import { Card, ProgressBar, progressPercent, vars } from '../components'
 import { MapView } from '../features/search/MapView'
 import { getCarparkDetails, getWeather } from '../features/search/carparkApi'
 import { POPULAR_CARPARKS } from '../features/navigation/constants'
 import { useAuth } from '../features/auth/AuthContext'
 import { AvailabilityAlertControl } from '../features/carparks/alerts/AvailabilityAlertControl'
+import { createFavourite, deleteFavourite, listFavourites } from '../features/favourites/favouritesApi'
 import type { CarparkDetails } from '@smart-parking/shared-types'
 import type { WeatherInfo } from '@smart-parking/shared-types'
 
@@ -29,11 +30,18 @@ function Row({ label, value }: { label: string; value: string }) {
   )
 }
 
-export function CarparkDetailPage({ carParkNo, initialDetails, onBack, onNavigate }: {
+export function CarparkDetailPage({
+  carParkNo,
+  initialDetails,
+  onBack,
+  onNavigate,
+  isOverlay = false,
+}: {
   carParkNo: string
   initialDetails?: CarparkDetails
   onBack: () => void
   onNavigate: () => void
+  isOverlay?: boolean
 }) {
   const { session } = useAuth()
   const [details, setDetails] = useState<CarparkDetails | null>(initialDetails ?? null)
@@ -103,20 +111,144 @@ export function CarparkDetailPage({ carParkNo, initialDetails, onBack, onNavigat
     return () => { cancelled = true }
   }, [carParkNo, initialDetails])
 
-  const containerStyle = {
-    position: 'fixed' as const,
-    top: 0, bottom: 0, left: '50%',
-    transform: 'translateX(-50%)',
-    width: '100%',
-    maxWidth: vars.layout.viewportWidth,
-    fontFamily: vars.font.family,
-    color: vars.color.textPrimary,
-    boxSizing: 'border-box' as const,
-    display: 'flex',
-    flexDirection: 'column' as const,
-    background: vars.color.background,
-    zIndex: 100,
+  const [isSaved, setIsSaved] = useState(false)
+  const [favouriteId, setFavouriteId] = useState<number | null>(null)
+  const [isSavingFavourite, setIsSavingFavourite] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [showSaveModal, setShowSaveModal] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [customName, setCustomName] = useState('')
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [toastMessage, setToastMessage] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!toastMessage) return
+    const timer = setTimeout(() => setToastMessage(null), 3500)
+    return () => clearTimeout(timer)
+  }, [toastMessage])
+
+  useEffect(() => {
+    const token = session?.token
+    const carpark = details?.carpark
+    if (!token || !carpark) return
+
+    let cancelled = false
+    listFavourites(token)
+      .then((favs) => {
+        if (cancelled) return
+        const found = favs.find((f) =>
+          (Math.abs(f.latitude - carpark.latitude) < 0.0001 &&
+           Math.abs(f.longitude - carpark.longitude) < 0.0001) ||
+          f.address.toLowerCase() === carpark.address.toLowerCase()
+        )
+        if (found) {
+          setIsSaved(true)
+          setFavouriteId(found.id)
+        } else {
+          setIsSaved(false)
+          setFavouriteId(null)
+        }
+      })
+      .catch(() => {})
+
+    return () => { cancelled = true }
+  }, [session?.token, details?.carpark])
+
+  function handleSaveClick() {
+    if (!session?.token) {
+      setToastMessage('Sign in to save this carpark to your favourites.')
+      return
+    }
+    if (isSaved) {
+      setShowDeleteModal(true)
+      return
+    }
+    setCustomName(details?.carpark.address ?? '')
+    setSaveError(null)
+    setShowSaveModal(true)
   }
+
+  async function handleConfirmDelete() {
+    if (!session?.token || favouriteId === null || isDeleting) return
+    setIsDeleting(true)
+    try {
+      await deleteFavourite(session.token, favouriteId)
+      setIsSaved(false)
+      setFavouriteId(null)
+      setShowDeleteModal(false)
+      setToastMessage('Removed from favourites')
+    } catch (err) {
+      setToastMessage(err instanceof Error ? err.message : 'Could not remove favourite')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  async function handleConfirmSave(e: React.FormEvent) {
+    e.preventDefault()
+    if (!session?.token || !details?.carpark || isSavingFavourite) return
+    const nameToSave = customName.trim() || details.carpark.address
+    setIsSavingFavourite(true)
+    setSaveError(null)
+    try {
+      const created = await createFavourite(session.token, {
+        locationName: nameToSave,
+        address: details.carpark.address,
+        latitude: details.carpark.latitude,
+        longitude: details.carpark.longitude,
+      })
+      setIsSaved(true)
+      setFavouriteId(created.id)
+      setShowSaveModal(false)
+      setToastMessage('Location saved to favourites!')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to save favourite'
+      if (msg.includes('already exists') || msg.includes('409') || msg.includes('FAVOURITE_ALREADY_EXISTS')) {
+        setIsSaved(true)
+        setShowSaveModal(false)
+        setToastMessage('This location is already saved in your favourites.')
+      } else {
+        setSaveError(msg)
+      }
+    } finally {
+      setIsSavingFavourite(false)
+    }
+  }
+
+  const containerStyle: CSSProperties = isOverlay
+    ? {
+        position: 'absolute',
+        inset: 0,
+        width: '100%',
+        height: '100%',
+        zIndex: 60,
+        display: 'flex',
+        flexDirection: 'column',
+        background: vars.color.background,
+        fontFamily: vars.font.family,
+        color: vars.color.textPrimary,
+        boxSizing: 'border-box',
+        borderRadius: '16px',
+        overflow: 'hidden',
+      }
+    : {
+        width: '380px',
+        maxWidth: '100%',
+        height: 'calc(100vh - 74px)',
+        maxHeight: '700px',
+        margin: '6px auto',
+        borderRadius: '16px',
+        boxShadow: '0 4px 24px rgba(0, 0, 0, 0.08)',
+        border: `1px solid ${vars.color.border}`,
+        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column',
+        background: vars.color.background,
+        fontFamily: vars.font.family,
+        color: vars.color.textPrimary,
+        boxSizing: 'border-box',
+        overflow: 'hidden',
+      }
 
   if (loading) {
     return (
@@ -228,15 +360,22 @@ export function CarparkDetailPage({ carParkNo, initialDetails, onBack, onNavigat
 
       {/* Bottom actions */}
       <div style={{ padding: `${vars.space[3]} ${vars.layout.gutter}`, borderTop: `1px solid ${vars.color.border}`, display: 'flex', flexDirection: 'column', gap: vars.space[2], flexShrink: 0 }}>
-        <button style={{
-          width: '100%', padding: vars.space[3], borderRadius: vars.radius.md,
-          background: vars.color.secondary, color: '#fff', border: 'none',
-          fontSize: vars.fontSize.md, fontWeight: vars.fontWeight.semibold,
-          fontFamily: vars.font.family, cursor: 'pointer',
-        }}>
-          Save to Favourites
+        <button
+          type="button"
+          onClick={handleSaveClick}
+          disabled={isSavingFavourite}
+          style={{
+            width: '100%', padding: vars.space[3], borderRadius: vars.radius.md,
+            background: isSaved ? '#059669' : vars.color.secondary,
+            color: '#fff', border: 'none',
+            fontSize: vars.fontSize.md, fontWeight: vars.fontWeight.semibold,
+            fontFamily: vars.font.family, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: vars.space[2],
+          }}
+        >
+          {isSaved ? '✓ Saved in Favourites' : 'Save to Favourites'}
         </button>
-        <button onClick={onNavigate} style={{
+        <button type="button" onClick={onNavigate} style={{
           width: '100%', padding: vars.space[3], borderRadius: vars.radius.md,
           background: '#1d4ed8', color: '#fff', border: 'none',
           fontSize: vars.fontSize.md, fontWeight: vars.fontWeight.semibold,
@@ -245,6 +384,153 @@ export function CarparkDetailPage({ carParkNo, initialDetails, onBack, onNavigat
           Navigate
         </button>
       </div>
+
+      {/* Confirmation & Custom Name Modal (UC-10, UC-10.AC.1) */}
+      {showSaveModal && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.45)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: vars.space[4], zIndex: 1100,
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="save-favourite-title"
+        >
+          <div style={{
+            background: vars.color.background, borderRadius: vars.radius.lg,
+            padding: vars.space[4], width: '100%', maxWidth: 360,
+            boxShadow: '0 10px 25px rgba(0,0,0,0.2)', border: `1px solid ${vars.color.border}`,
+          }}>
+            <h3 id="save-favourite-title" style={{ margin: 0, fontSize: vars.fontSize.lg, fontWeight: vars.fontWeight.bold, color: vars.color.textPrimary }}>
+              Save to Favourites
+            </h3>
+            <p style={{ fontSize: vars.fontSize.xs, color: vars.color.textSecondary, margin: `${vars.space[1]} 0 ${vars.space[3]}` }}>
+              Give this location a custom name (e.g. Work, Gym, Home) or keep the address.
+            </p>
+            <form onSubmit={(e) => void handleConfirmSave(e)}>
+              <label
+                htmlFor="favourite-name-input"
+                style={{ display: 'block', fontSize: vars.fontSize.xs, fontWeight: vars.fontWeight.semibold, color: vars.color.textSecondary, marginBottom: vars.space[1] }}
+              >
+                Location name
+              </label>
+              <input
+                id="favourite-name-input"
+                type="text"
+                value={customName}
+                onChange={(e) => setCustomName(e.target.value)}
+                autoFocus
+                disabled={isSavingFavourite}
+                style={{
+                  width: '100%', padding: vars.space[2], borderRadius: vars.radius.md,
+                  border: `1px solid ${vars.color.border}`, fontSize: vars.fontSize.sm,
+                  color: vars.color.textPrimary, background: vars.color.surface,
+                  boxSizing: 'border-box', marginBottom: vars.space[2],
+                }}
+              />
+              {saveError && (
+                <p style={{ color: vars.color.danger, fontSize: vars.fontSize.xs, margin: `0 0 ${vars.space[2]}` }} role="alert">
+                  {saveError}
+                </p>
+              )}
+              <div style={{ display: 'flex', gap: vars.space[2], justifyContent: 'flex-end', marginTop: vars.space[3] }}>
+                <button
+                  type="button"
+                  onClick={() => setShowSaveModal(false)}
+                  disabled={isSavingFavourite}
+                  style={{
+                    padding: `${vars.space[2]} ${vars.space[3]}`, borderRadius: vars.radius.md,
+                    background: 'transparent', border: `1px solid ${vars.color.border}`,
+                    fontSize: vars.fontSize.sm, cursor: 'pointer', color: vars.color.textSecondary,
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingFavourite}
+                  style={{
+                    padding: `${vars.space[2]} ${vars.space[3]}`, borderRadius: vars.radius.md,
+                    background: vars.color.secondary, color: '#fff', border: 'none',
+                    fontSize: vars.fontSize.sm, fontWeight: vars.fontWeight.semibold, cursor: 'pointer',
+                  }}
+                >
+                  {isSavingFavourite ? 'Saving…' : 'Save'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal (FR39, UC-11) */}
+      {showDeleteModal && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.45)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: vars.space[4], zIndex: 1100,
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-favourite-title"
+        >
+          <div style={{
+            background: vars.color.background, borderRadius: vars.radius.lg,
+            padding: vars.space[4], width: '100%', maxWidth: 360,
+            boxShadow: '0 10px 25px rgba(0,0,0,0.2)', border: `1px solid ${vars.color.border}`,
+          }}>
+            <h3 id="delete-favourite-title" style={{ margin: 0, fontSize: vars.fontSize.lg, fontWeight: vars.fontWeight.bold, color: vars.color.textPrimary }}>
+              Remove from Favourites?
+            </h3>
+            <p style={{ fontSize: vars.fontSize.xs, color: vars.color.textSecondary, margin: `${vars.space[2]} 0 ${vars.space[4]}` }}>
+              Do you want to remove <strong>{details?.carpark.address}</strong> from your saved favourites?
+            </p>
+            <div style={{ display: 'flex', gap: vars.space[2], justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(false)}
+                disabled={isDeleting}
+                style={{
+                  padding: `${vars.space[2]} ${vars.space[3]}`, borderRadius: vars.radius.md,
+                  background: 'transparent', border: `1px solid ${vars.color.border}`,
+                  fontSize: vars.fontSize.sm, cursor: 'pointer', color: vars.color.textSecondary,
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleConfirmDelete()}
+                disabled={isDeleting}
+                style={{
+                  padding: `${vars.space[2]} ${vars.space[3]}`, borderRadius: vars.radius.md,
+                  background: vars.color.danger, color: '#fff', border: 'none',
+                  fontSize: vars.fontSize.sm, fontWeight: vars.fontWeight.semibold, cursor: 'pointer',
+                }}
+              >
+                {isDeleting ? 'Removing…' : 'Remove Favourite'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Feedback Toast */}
+      {toastMessage && (
+        <div
+          role="status"
+          style={{
+            position: 'fixed', bottom: 80, left: '50%', transform: 'translateX(-50%)',
+            background: '#111827', color: '#fff', padding: `${vars.space[2]} ${vars.space[4]}`,
+            borderRadius: vars.radius.md, fontSize: vars.fontSize.sm, fontWeight: vars.fontWeight.medium,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.2)', zIndex: 1200, whiteSpace: 'nowrap',
+          }}
+        >
+          {toastMessage}
+        </div>
+      )}
     </div>
   )
 }

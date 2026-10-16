@@ -145,7 +145,6 @@ function FavouritesSession({ token, onSelect, onSearch }: FavouritesPageProps & 
         {token && <button type="button" className="favourites-secondary" onClick={() => void load()}>Try again</button>}
       </div>}
       {!loading && !loadError && visible?.length === 0 && <div className="favourites-empty">
-        <span className="favourites-empty-mark" aria-hidden="true">⌖</span>
         <h2>No saved locations yet</h2>
         <p>Search for a destination and save it here for next time.</p>
         <button type="button" className="favourites-primary" onClick={onSearch}>Search destinations</button>

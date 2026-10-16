@@ -6,17 +6,19 @@ import { SignUpPage } from './pages/SignUpPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { FavouritesPage } from './pages/FavouritesPage'
 import { NavigationPage } from './pages/NavigationPage'
+import { CarparkDetailPage } from './pages/CarparkDetailPage'
 import './App.css'
 
-type Page = 'sign-in' | 'sign-up' | 'search' | 'profile' | 'favourites' | 'navigation'
+type Page = 'sign-in' | 'sign-up' | 'search' | 'profile' | 'favourites' | 'navigation' | 'carpark-detail'
 
 function AppShell() {
   const { session, logout } = useAuth()
   const [page, setPage] = useState<Page>('sign-in')
   const [handoff, setHandoff] = useState('')
+  const [selectedCarParkNo, setSelectedCarParkNo] = useState<string | null>(null)
 
   const activePage: Page = session
-    ? page === 'search' || page === 'favourites' || page === 'navigation'
+    ? page === 'search' || page === 'favourites' || page === 'navigation' || page === 'carpark-detail'
       ? page
       : 'profile'
     : page === 'sign-up'
@@ -26,6 +28,11 @@ function AppShell() {
   function navigate(next: Page) {
     setHandoff('')
     setPage(next)
+  }
+
+  function openCarparkDetail(carParkNo: string) {
+    setSelectedCarParkNo(carParkNo)
+    setPage('carpark-detail')
   }
 
   const content = (() => {
@@ -42,7 +49,21 @@ function AppShell() {
         return <SignUpPage onSwitchMode={() => navigate('sign-in')} />
 
       case 'search':
-        return <SearchPage />
+      case 'carpark-detail':
+        return (
+          <>
+            <div style={activePage === 'carpark-detail' ? { display: 'none' } : undefined}>
+              <SearchPage onSelectCarpark={openCarparkDetail} />
+            </div>
+            {activePage === 'carpark-detail' && selectedCarParkNo && (
+              <CarparkDetailPage
+                carParkNo={selectedCarParkNo}
+                onBack={() => navigate('search')}
+                onNavigate={() => navigate('navigation')}
+              />
+            )}
+          </>
+        )
 
       case 'profile':
         return <ProfilePage onAccountDeleted={() => navigate('sign-in')} />

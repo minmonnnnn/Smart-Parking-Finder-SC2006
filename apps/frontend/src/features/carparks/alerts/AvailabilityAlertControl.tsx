@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { vars } from "../../../components";
 import { AvailabilityAlertToggle } from "./AvailabilityAlertToggle";
 import { createAvailabilityAlert, updateAvailabilityAlert } from "./api";
 
@@ -14,7 +15,21 @@ export function AvailabilityAlertControl({
   accessToken,
 }: AvailabilityAlertControlProps) {
   if (!userId || !accessToken) {
-    return <p>Sign in to enable availability alerts.</p>;
+    return (
+      <div
+        style={{
+          marginTop: vars.space[3],
+          padding: `${vars.space[2]} ${vars.space[3]}`,
+          background: vars.color.surface,
+          borderRadius: vars.radius.md,
+          border: `1px solid ${vars.color.border}`,
+          fontSize: vars.fontSize.xs,
+          color: vars.color.textSecondary,
+        }}
+      >
+        <p style={{ margin: 0 }}>Sign in to enable availability alerts.</p>
+      </div>
+    );
   }
 
   return (
@@ -75,9 +90,13 @@ function SubscriptionControl({
       if (active.current) {
         setEnabled(nextEnabled);
       }
-    } catch {
+    } catch (err) {
       if (active.current) {
-        setError("Unable to update availability alerts");
+        const msg =
+          err instanceof Error && err.message !== "Request failed"
+            ? err.message
+            : "Unable to update availability alerts";
+        setError(msg);
       }
     } finally {
       inFlight.current = false;
@@ -89,9 +108,35 @@ function SubscriptionControl({
   }
 
   return (
-    <div>
-      <fieldset disabled={pending}>
-        <legend>Availability alerts</legend>
+    <div
+      style={{
+        marginTop: vars.space[3],
+        padding: vars.space[3],
+        background: vars.color.surface,
+        borderRadius: vars.radius.md,
+        border: `1px solid ${vars.color.border}`,
+      }}
+    >
+      <fieldset
+        disabled={pending}
+        style={{
+          border: 'none',
+          padding: 0,
+          margin: 0,
+        }}
+      >
+        <legend
+          style={{
+            fontSize: vars.fontSize.xs,
+            fontWeight: vars.fontWeight.semibold,
+            color: vars.color.textMuted,
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px',
+            marginBottom: vars.space[2],
+          }}
+        >
+          Availability alerts
+        </legend>
 
         <AvailabilityAlertToggle
           enabled={enabled}
@@ -101,8 +146,30 @@ function SubscriptionControl({
         />
       </fieldset>
 
-      {pending && <p role="status">Updating alert...</p>}
-      {error && <p role="alert">{error}</p>}
+      {pending && (
+        <p
+          role="status"
+          style={{
+            margin: `${vars.space[2]} 0 0`,
+            fontSize: vars.fontSize.xs,
+            color: vars.color.textSecondary,
+          }}
+        >
+          Updating alert...
+        </p>
+      )}
+      {error && (
+        <p
+          role="alert"
+          style={{
+            margin: `${vars.space[2]} 0 0`,
+            fontSize: vars.fontSize.xs,
+            color: vars.color.danger,
+          }}
+        >
+          {error}
+        </p>
+      )}
     </div>
   );
 }

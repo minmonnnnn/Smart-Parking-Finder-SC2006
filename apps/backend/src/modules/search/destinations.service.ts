@@ -15,7 +15,7 @@ export interface DestinationSuggestion {
 function apiKey(): string {
   const key = process.env.GOOGLE_MAPS_API_KEY;
   if (!key) throw new Error('GOOGLE_MAPS_API_KEY is not set');
-  return key;
+  return key.split('#')[0]!.trim();
 }
 
 // GET /api/destinations/search?query=<text>  FR3–FR4

@@ -8,11 +8,18 @@ import { createFavouritesRouter } from './modules/favourites/favourites.routes.j
 import routingRouter from './modules/routing/routing.routes.js'
 import { createSearchRouter } from './modules/search/search.routes.js'
 import weatherRouter from './modules/weather/weather.routes.js'
+import availabilityRouter from './modules/availability/routes.js'
+import { createAlertRouter } from './modules/availability/alerts.routes.js'
+import { startAvailabilityPoller } from './modules/availability/poller.js'
 
 const env = loadEnv(process.env)
 const clients = createSupabaseClients(env)
 const authGateway = createSupabaseAuthGateway(clients)
 const favouritesGateway = createSupabaseFavouritesGateway(clients.adminClient)
+
+// Start background poller to fetch real-time Singapore carpark availability from data.gov.sg
+startAvailabilityPoller()
+
 createApp({
   frontendOrigin: env.frontendOrigin,
   auth: createAuthRouter({ gateway: authGateway }),
@@ -21,6 +28,8 @@ createApp({
   routing: routingRouter,
   search: createSearchRouter(clients.adminClient),
   weather: weatherRouter,
+  availability: availabilityRouter,
+  alerts: createAlertRouter(authGateway.verifyToken),
 }).listen(env.port, () => {
   console.log(`Backend listening on http://localhost:${env.port}`)
 })

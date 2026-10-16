@@ -100,14 +100,9 @@ export async function getNearbyCarparks(
     return { carparks: [], degradedServices };
   }
 
-  // 2. Enrich each carpark in parallel
-  const now = new Date();
-  const arrivalDayOfWeek = now.getDay();
-  const arrivalHour = now.getHours();
-
-  const enriched = await Promise.all(
-    carparks.map(async (carpark): Promise<RankedCarpark | null> => {
-      // Availability (Xi Fei)
+  // 2. Pre-filter candidate carparks by user filters and compute proximity
+  const filteredCandidates = carparks
+    .map((carpark) => {
       let availability: AvailabilityInfo;
       try {
         const cached = getAvailabilityByCarParkNo(carpark.carParkNo);
@@ -123,13 +118,39 @@ export async function getNearbyCarparks(
       // Apply filters before paying for routing calls
       if (!passesFilters(carpark, availability, filters)) return null;
 
-      // Walking distance (always computed — no origin needed)
+      // Walking distance (straight-line Haversine pre-filter)
       const walkingDistanceKm = calculateDistanceKm(
         carpark.latitude, carpark.longitude,
         destinationLat, destinationLng,
       );
       const walkingDistanceMeters = Math.round(walkingDistanceKm * 1000);
 
+      return {
+        carpark,
+        availability,
+        walkingDistanceMeters,
+      };
+    })
+    .filter((c): c is NonNullable<typeof c> => c !== null);
+
+  if (filteredCandidates.length === 0) {
+    return { carparks: [], degradedServices };
+  }
+
+  // Sort candidates by proximity to destination
+  filteredCandidates.sort((a, b) => a.walkingDistanceMeters - b.walkingDistanceMeters);
+
+  // Limit live routing calls to top 10 closest matching carparks (Option B)
+  const MAX_CANDIDATES = 10;
+  const topCandidates = filteredCandidates.slice(0, MAX_CANDIDATES);
+
+  // 3. Enrich top candidates in parallel with live routes and recommendation scores
+  const now = new Date();
+  const arrivalDayOfWeek = now.getDay();
+  const arrivalHour = now.getHours();
+
+  const enriched = await Promise.all(
+    topCandidates.map(async ({ carpark, availability, walkingDistanceMeters }): Promise<RankedCarpark> => {
       // Walking ETA (Xavier)
       let walkingEtaMinutes = Math.max(1, Math.round(walkingDistanceMeters / 75));
       try {
@@ -198,16 +219,13 @@ export async function getNearbyCarparks(
     }),
   );
 
-  // 3. Remove nulls (filtered out) and sort
-  const results = enriched.filter((r): r is RankedCarpark => r !== null);
-
   if (sort === 'recommended') {
-    results.sort((a, b) => b.recommendationScore - a.recommendationScore);
+    enriched.sort((a, b) => b.recommendationScore - a.recommendationScore);
   } else {
-    results.sort((a, b) => a.distanceMeters - b.distanceMeters);
+    enriched.sort((a, b) => a.distanceMeters - b.distanceMeters);
   }
 
-  return { carparks: results, degradedServices };
+  return { carparks: enriched, degradedServices };
 }
 
 export async function getCarparkDetails(
@@ -217,7 +235,7 @@ export async function getCarparkDetails(
   const carpark = await getCarparkByNo(client, carParkNo);
   if (!carpark) return null;
 
-  const cached = getAvailabilityByCarParkNo(carParkNo);
+  const cached = getAvailabilityByCarParkNo(carpark.carParkNo);
   const availability = cached ?? {
     availableLots: 0,
     totalLots: 0,

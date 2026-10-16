@@ -37,6 +37,27 @@ function classifyTraffic(distanceKm: number, durationMinutes: number): TrafficSt
   return 'Light';
 }
 
+// In-memory cache to prevent duplicate Google Routes API hits
+interface CacheEntry<T> {
+  data: T;
+  expiresAt: number;
+}
+const drivingRouteCache = new Map<string, CacheEntry<DrivingRoute>>();
+const walkingRouteCache = new Map<string, CacheEntry<WalkingRoute>>();
+const ROUTE_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+function makeRouteKey(oLat: number, oLng: number, dLat: number, dLng: number): string {
+  return `${oLat.toFixed(4)},${oLng.toFixed(4)}->${dLat.toFixed(4)},${dLng.toFixed(4)}`;
+}
+
+function getRoutingApiKey(): string {
+  const rawKey = process.env.GOOGLE_MAPS_API_KEY;
+  if (!rawKey) {
+    throw new Error('GOOGLE_MAPS_API_KEY is not set');
+  }
+  return rawKey.split('#')[0]!.trim();
+}
+
 /**
  * Calculates driving route from origin to destination/carpark.
  * Fulfills FR21-FR23, FR28, FR30, FR31, FR34.
@@ -47,10 +68,13 @@ export async function getDrivingRoute(
   destLat: number,
   destLng: number
 ): Promise<DrivingRoute> {
-  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
-  if (!apiKey) {
-    throw new Error('GOOGLE_MAPS_API_KEY is not set');
+  const cacheKey = makeRouteKey(originLat, originLng, destLat, destLng);
+  const cached = drivingRouteCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data;
   }
+
+  const apiKey = getRoutingApiKey();
 
   try {
     const response = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
@@ -70,6 +94,10 @@ export async function getDrivingRoute(
     });
 
     const data = await response.json();
+
+    if (!response.ok) {
+      console.warn(`[RoutingService] Google Routes API returned HTTP ${response.status}:`, data?.error?.message || data);
+    }
 
     if (data.routes && Array.isArray(data.routes) && data.routes.length > 0) {
       interface GoogleRouteItem {
@@ -105,6 +133,7 @@ export async function getDrivingRoute(
         primary.alternatives = parsedRoutes.slice(1);
       }
 
+      drivingRouteCache.set(cacheKey, { data: primary, expiresAt: Date.now() + ROUTE_CACHE_TTL_MS });
       return primary;
     }
   } catch (error) {
@@ -145,10 +174,13 @@ export async function getWalkingRoute(
   destLat: number,
   destLng: number
 ): Promise<WalkingRoute> {
-  const apiKey = process.env.GOOGLE_MAPS_API_KEY;
-  if (!apiKey) {
-    throw new Error('GOOGLE_MAPS_API_KEY is not set');
+  const cacheKey = makeRouteKey(originLat, originLng, destLat, destLng);
+  const cached = walkingRouteCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.data;
   }
+
+  const apiKey = getRoutingApiKey();
 
   try {
     const response = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
@@ -167,17 +199,23 @@ export async function getWalkingRoute(
 
     const data = await response.json();
 
+    if (!response.ok) {
+      console.warn(`[RoutingService] Google Routes walking API returned HTTP ${response.status}:`, data?.error?.message || data);
+    }
+
     if (data.routes && Array.isArray(data.routes) && data.routes.length > 0) {
       const firstRoute = data.routes[0]!;
       const rawSeconds = parseInt((firstRoute.duration || '0s').replace('s', ''), 10);
       const durationMin = Math.max(1, Math.round(rawSeconds / 60));
       const distMeters = Math.round(firstRoute.distanceMeters || 0);
 
-      return {
+      const walkResult: WalkingRoute = {
         polyline: firstRoute.polyline?.encodedPolyline || '',
         distanceMeters: distMeters,
         durationMinutes: durationMin,
       };
+      walkingRouteCache.set(cacheKey, { data: walkResult, expiresAt: Date.now() + ROUTE_CACHE_TTL_MS });
+      return walkResult;
     }
   } catch (error) {
     console.warn('[RoutingService] Google Routes walking API failed, using distance estimation:', error);

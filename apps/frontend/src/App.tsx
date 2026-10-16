@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { AuthProvider, useAuth } from './features/auth/AuthContext'
-import SearchPage from './features/search/SearchPage'
+import SearchPage, { type InitialDestination } from './features/search/SearchPage'
 import { SignInPage } from './pages/SignInPage'
 import { SignUpPage } from './pages/SignUpPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { FavouritesPage } from './pages/FavouritesPage'
 import { NavigationPage } from './pages/NavigationPage'
 import { CarparkDetailPage } from './pages/CarparkDetailPage'
+import type { CarparkDetails } from '@smart-parking/shared-types'
 import './App.css'
 
 type Page = 'sign-in' | 'sign-up' | 'search' | 'profile' | 'favourites' | 'navigation' | 'carpark-detail'
@@ -16,6 +17,9 @@ function AppShell() {
   const [page, setPage] = useState<Page>('sign-in')
   const [handoff, setHandoff] = useState('')
   const [selectedCarParkNo, setSelectedCarParkNo] = useState<string | null>(null)
+  const [selectedCarparkDetails, setSelectedCarparkDetails] = useState<CarparkDetails | undefined>(undefined)
+  const [selectedDestination, setSelectedDestination] = useState<InitialDestination | null>(null)
+  const [returnPage, setReturnPage] = useState<Page>('search')
 
   const activePage: Page = session
     ? page === 'search' || page === 'favourites' || page === 'navigation' || page === 'carpark-detail'
@@ -30,8 +34,9 @@ function AppShell() {
     setPage(next)
   }
 
-  function openCarparkDetail(carParkNo: string) {
+  function openCarparkDetail(carParkNo: string, details?: CarparkDetails) {
     setSelectedCarParkNo(carParkNo)
+    setSelectedCarparkDetails(details)
     setPage('carpark-detail')
   }
 
@@ -53,13 +58,26 @@ function AppShell() {
         return (
           <>
             <div style={activePage === 'carpark-detail' ? { display: 'none' } : undefined}>
-              <SearchPage onSelectCarpark={openCarparkDetail} />
+              <SearchPage
+                onSelectCarpark={(carParkNo) => {
+                  setReturnPage('search')
+                  openCarparkDetail(carParkNo)
+                }}
+                initialDestination={selectedDestination}
+              />
             </div>
             {activePage === 'carpark-detail' && selectedCarParkNo && (
               <CarparkDetailPage
                 carParkNo={selectedCarParkNo}
-                onBack={() => navigate('search')}
-                onNavigate={() => navigate('navigation')}
+                initialDetails={selectedCarparkDetails}
+                onBack={() => navigate(returnPage)}
+                onNavigate={(details) => {
+                  if (details) {
+                    setSelectedCarParkNo(details.carpark.carParkNo)
+                    setSelectedCarparkDetails(details)
+                  }
+                  navigate('navigation')
+                }}
               />
             )}
           </>
@@ -71,17 +89,48 @@ function AppShell() {
       case 'favourites':
         return (
           <FavouritesPage
-            onSelect={(favourite) =>
-              setHandoff(
-                `Selected ${favourite.locationName} (${favourite.address}).`,
-              )
-            }
+            onSelect={(favourite) => {
+              setReturnPage('favourites')
+              const initial: CarparkDetails = {
+                carpark: {
+                  carParkNo: favourite.address || favourite.locationName,
+                  address: favourite.address,
+                  latitude: favourite.latitude,
+                  longitude: favourite.longitude,
+                  carParkType: 'Multi-storey',
+                  isSheltered: true,
+                  totalLots: 120,
+                  freeParking: null,
+                  nightParking: 'YES',
+                  hasEvCharging: false,
+                  parkingSystem: 'Electronic',
+                  postalCode: null,
+                  parkingCost: 0.6,
+                  updatedAt: favourite.createdAt || new Date().toISOString(),
+                },
+                availability: {
+                  availableLots: 48,
+                  totalLots: 120,
+                  status: 'Moderate',
+                  lastUpdated: new Date().toISOString(),
+                  isStale: false,
+                },
+              }
+              openCarparkDetail(favourite.address || favourite.locationName, initial)
+            }}
             onSearch={() => navigate('search')}
           />
         )
 
       case 'navigation':
-        return <NavigationPage onBack={() => navigate('search')} />
+        return (
+          <NavigationPage
+            onBack={() => navigate(returnPage === 'favourites' ? 'favourites' : 'search')}
+            initialCarparkNo={selectedCarParkNo}
+            initialCarparkDetails={selectedCarparkDetails}
+            onNavigate={navigate}
+          />
+        )
     }
   })()
 

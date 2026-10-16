@@ -18,6 +18,12 @@ export async function createAvailabilityAlert(
   });
 
   if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error("Session expired. Please log out and sign in again.");
+    }
+    if (response.status === 404) {
+      throw new Error("Live availability alerts are not supported for this carpark.");
+    }
     throw new Error("Unable to create availability alert");
   }
 
@@ -39,6 +45,12 @@ export async function updateAvailabilityAlert(
   });
 
   if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error("Session expired. Please log out and sign in again.");
+    }
+    if (response.status === 404) {
+      throw new Error("Live availability alerts are not supported for this carpark.");
+    }
     throw new Error("Unable to update availability alert");
   }
 }

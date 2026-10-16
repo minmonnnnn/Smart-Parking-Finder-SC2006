@@ -1,4 +1,4 @@
-import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from "react";
+import { type CSSProperties, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { Card, ProgressBar, progressPercent, vars } from "../../components";
 import { MapView } from "./MapView";
 import type {
@@ -32,11 +32,6 @@ const navigateIcon = (
   </svg>
 );
 
-const hamburgerIcon = (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-    <path d="M3 6h18M3 12h18M3 18h18" />
-  </svg>
-);
 
 const locateIcon = (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
@@ -407,7 +402,22 @@ function SearchBar({
 // ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
-export default function SearchPage({ onSelectCarpark }: { onSelectCarpark?: (carParkNo: string) => void }) {
+export interface InitialDestination {
+  query: string;
+  address?: string;
+  lat: number;
+  lng: number;
+}
+
+export interface SearchPageProps {
+  onSelectCarpark?: (carParkNo: string) => void;
+  initialDestination?: InitialDestination | null;
+}
+
+export default function SearchPage({
+  onSelectCarpark,
+  initialDestination,
+}: SearchPageProps) {
   const [query, setQuery] = useState("");
   const [searched, setSearched] = useState(false);
   const [destination, setDestination] = useState("");
@@ -474,6 +484,50 @@ export default function SearchPage({ onSelectCarpark }: { onSelectCarpark?: (car
     }
   }
 
+  const searchByCoordinates = useCallback(async (lat: number, lng: number, label: string) => {
+    setQuery(label);
+    setShowSuggestions(false);
+    setSuggestions([]);
+    setIsLoading(true);
+    setError(null);
+    destCoordsRef.current = { lat, lng };
+    setDestination(label);
+    try {
+      const nearby = await getNearbyCarparks({
+        destinationLat: lat,
+        destinationLng: lng,
+        filters: {
+          ...(evFilter === "yes" ? { evChargingOnly: true } : {}),
+          ...(shelteredFilter === "yes" ? { shelteredOnly: true } : {}),
+        },
+      });
+      setCarparks(nearby.carparks);
+      setDegradedServices(nearby.degradedServices);
+      setSearched(true);
+    } catch {
+      setError("Failed to find carparks. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [evFilter, shelteredFilter]);
+
+  const prevInitialDestRef = useRef<InitialDestination | null>(null);
+  useEffect(() => {
+    if (
+      initialDestination &&
+      (prevInitialDestRef.current?.lat !== initialDestination.lat ||
+       prevInitialDestRef.current?.lng !== initialDestination.lng ||
+       prevInitialDestRef.current?.query !== initialDestination.query)
+    ) {
+      prevInitialDestRef.current = initialDestination;
+      void searchByCoordinates(
+        initialDestination.lat,
+        initialDestination.lng,
+        initialDestination.query || initialDestination.address || "Destination"
+      );
+    }
+  }, [initialDestination, searchByCoordinates]);
+
   function handleSearch() {
     if (suggestions.length > 0) {
       void handleSelectSuggestion(suggestions[0]!);
@@ -520,9 +574,19 @@ export default function SearchPage({ onSelectCarpark }: { onSelectCarpark?: (car
   };
 
   const sharedStyle: CSSProperties = {
-    position: "fixed", top: 0, bottom: 0, left: "50%", transform: "translateX(-50%)",
-    width: "100%", maxWidth: vars.layout.viewportWidth,
-    fontFamily: vars.font.family, color: vars.color.textPrimary, boxSizing: "border-box",
+    width: "380px",
+    maxWidth: "100%",
+    height: "calc(100vh - 74px)",
+    maxHeight: "700px",
+    margin: "6px auto",
+    borderRadius: "16px",
+    boxShadow: "0 4px 24px rgba(0, 0, 0, 0.08)",
+    border: `1px solid ${vars.color.border}`,
+    position: "relative",
+    fontFamily: vars.font.family,
+    color: vars.color.textPrimary,
+    boxSizing: "border-box",
+    overflow: "hidden",
   };
 
   const searchBarProps = {
@@ -537,11 +601,6 @@ export default function SearchPage({ onSelectCarpark }: { onSelectCarpark?: (car
     return (
       <div style={sharedStyle}>
         <MapView compact={false} />
-        <div style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 20, display: "flex", padding: `${vars.space[3]} ${vars.layout.gutter}` }}>
-          <button aria-label="Open menu" style={{ background: "none", border: "none", padding: vars.space[1], cursor: "pointer", color: vars.color.background }}>
-            {hamburgerIcon}
-          </button>
-        </div>
         <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 10 }}>
           {isLoading && (
             <div style={{ textAlign: "center", padding: vars.space[2], fontSize: vars.fontSize.sm, color: vars.color.textSecondary, background: "rgba(255,255,255,0.9)" }}>
@@ -562,11 +621,6 @@ export default function SearchPage({ onSelectCarpark }: { onSelectCarpark?: (car
   // ── Results state ──
   return (
     <div style={{ ...sharedStyle, display: "flex", flexDirection: "column", background: vars.color.background }}>
-      <div style={{ display: "flex", padding: `${vars.space[3]} ${vars.layout.gutter}`, flexShrink: 0 }}>
-        <button aria-label="Open menu" style={{ background: "none", border: "none", padding: vars.space[1], cursor: "pointer", color: vars.color.textPrimary }}>
-          {hamburgerIcon}
-        </button>
-      </div>
 
       <div style={{ position: "relative", flexShrink: 0 }}>
         <MapView compact />

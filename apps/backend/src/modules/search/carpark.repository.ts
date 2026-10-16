@@ -65,12 +65,27 @@ export async function getCarparkByNo(
   client: SupabaseClient,
   carParkNo: string,
 ): Promise<Carpark | null> {
-  const { data, error } = await client
+  // 1. Try exact match on car_park_no
+  const { data: exactMatch, error: err1 } = await client
     .from('carparks')
     .select('*')
     .eq('car_park_no', carParkNo)
     .maybeSingle();
 
-  if (error) throw new Error(`carpark lookup failed: ${error.message}`);
-  return data ? rowToCarpark(data as CarparkRow) : null;
+  if (err1) throw new Error(`carpark lookup failed: ${err1.message}`);
+  if (exactMatch) return rowToCarpark(exactMatch as CarparkRow);
+
+  // 2. Fallback to matching by address (e.g. from saved favourites)
+  const { data: addrMatch, error: err2 } = await client
+    .from('carparks')
+    .select('*')
+    .ilike('address', `%${carParkNo}%`)
+    .limit(1);
+
+  if (err2) throw new Error(`carpark lookup failed: ${err2.message}`);
+  if (addrMatch && addrMatch.length > 0 && addrMatch[0]) {
+    return rowToCarpark(addrMatch[0] as CarparkRow);
+  }
+
+  return null;
 }

@@ -59,11 +59,19 @@ describe('createApp', () => {
     const favourites = express.Router().get('/', (_request, response) => {
       response.json({ reached: 'favourites' })
     })
-    const app = createApp({ auth, users, favourites })
+    const availability = express.Router().get('/test/availability', (_request, response) => {
+      response.json({ reached: 'availability' })
+    })
+    const alerts = express.Router().post('/', (_request, response) => {
+      response.json({ reached: 'alerts' })
+    })
+    const app = createApp({ auth, users, favourites, availability, alerts })
 
     await request(app).post('/api/auth/login').expect(200, { reached: 'auth' })
     await request(app).get('/api/users/me').expect(200, { reached: 'users' })
     await request(app).get('/api/favourites').expect(200, { reached: 'favourites' })
+    await request(app).get('/api/carparks/test/availability').expect(200, { reached: 'availability' })
+    await request(app).post('/api/alerts').expect(200, { reached: 'alerts' })
   })
 
   it('parses JSON for injected routers', async () => {

@@ -31,3 +31,7 @@ create policy "Users can delete their own favourite locations"
   on public.favourite_locations
   for delete
   using (auth.uid() = user_id);
+
+grant all on table public.favourite_locations to service_role, authenticated;
+grant all on sequence public.favourite_locations_favourite_id_seq to service_role, authenticated;
+

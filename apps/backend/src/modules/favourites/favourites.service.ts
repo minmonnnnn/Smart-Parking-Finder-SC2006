@@ -21,7 +21,8 @@ export function createFavouritesService(gateway: FavouriteGateway) {
     async list(userId: string): Promise<FavouriteLocation[]> {
       try {
         return await gateway.list(userId)
-      } catch {
+      } catch (error) {
+        console.error('FavouritesService.list error:', error)
         throw unavailable()
       }
     },
@@ -33,6 +34,7 @@ export function createFavouritesService(gateway: FavouriteGateway) {
         if (error !== null && typeof error === 'object' && 'code' in error && error.code === '23505') {
           throw new ApiException(409, 'FAVOURITE_ALREADY_EXISTS', 'Favourite already exists')
         }
+        console.error('FavouritesService.create error:', error)
         throw unavailable()
       }
     },
@@ -41,7 +43,8 @@ export function createFavouritesService(gateway: FavouriteGateway) {
       let favourite: FavouriteLocation | null
       try {
         favourite = await gateway.rename(userId, id, input)
-      } catch {
+      } catch (error) {
+        console.error('FavouritesService.rename error:', error)
         throw unavailable()
       }
       if (!favourite) throw notFound()
@@ -52,7 +55,8 @@ export function createFavouritesService(gateway: FavouriteGateway) {
       let deleted: boolean
       try {
         deleted = await gateway.delete(userId, id)
-      } catch {
+      } catch (error) {
+        console.error('FavouritesService.delete error:', error)
         throw unavailable()
       }
       if (!deleted) throw notFound()

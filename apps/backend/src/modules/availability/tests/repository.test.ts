@@ -1,10 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { replaceAvailabilityCache } from "../cache.js";
-import {
-  createAvailabilityRepository,
-  getAvailabilityByCarParkNo,
-} from "../repository.js";
+import { createAvailabilityRepository } from "../repository.js";
 
 interface DatabaseResult {
   data: unknown;
@@ -68,35 +64,6 @@ const record = {
   totalLots: 100,
   fetchedAt,
 };
-
-describe("existing memory availability getter", () => {
-  beforeEach(() => {
-    vi.useFakeTimers();
-    vi.setSystemTime(fetchedAt);
-    replaceAvailabilityCache([]);
-  });
-
-  afterEach(() => {
-    replaceAvailabilityCache([]);
-    vi.useRealTimers();
-  });
-
-  it("returns availability for a cached carpark", () => {
-    replaceAvailabilityCache([record]);
-
-    expect(getAvailabilityByCarParkNo("AK19")).toEqual({
-      availableLots: 20,
-      totalLots: 100,
-      status: "Moderate",
-      lastUpdated: fetchedAt.toISOString(),
-      isStale: false,
-    });
-  });
-
-  it("returns null for an unknown carpark", () => {
-    expect(getAvailabilityByCarParkNo("UNKNOWN")).toBeNull();
-  });
-});
 
 describe("Supabase availability repository", () => {
   beforeEach(() => {

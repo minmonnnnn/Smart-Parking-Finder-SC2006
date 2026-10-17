@@ -5,7 +5,6 @@ import {
   getAvailabilityStatus,
   type AvailabilityInfo,
 } from "./service.js";
-import { getCachedAvailability } from "./cache.js";
 
 interface AvailabilityRow {
   available_lots: number;
@@ -21,19 +20,6 @@ export interface AvailabilityRepository {
   saveAvailabilityRecords(
     records: RawAvailabilityRecord[],
   ): Promise<{ saved: number; skipped: number }>;
-}
-
-export function getAvailabilityByCarParkNo(
-  carParkNo: string,
-): AvailabilityInfo | null {
-  const item = getCachedAvailability(carParkNo);
-
-  if (!item) return null;
-  return buildAvailabilityInfo(
-    item.availableLots,
-    item.totalLots,
-    item.fetchedAt,
-  );
 }
 
 export function createAvailabilityRepository(

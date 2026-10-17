@@ -18,7 +18,10 @@ import { createAvailabilityRepository } from "./modules/availability/repository.
 import { createAvailabilityRouter } from "./modules/availability/routes.js";
 import { createAlertRouter } from "./modules/availability/alerts.routes.js";
 import { startAvailabilityPoller } from "./modules/availability/poller.js";
-import type { AvailabilityNotification } from "./modules/availability/alerts.service.js";
+import {
+  checkAvailabilityAlerts,
+  type AvailabilityNotification,
+} from "./modules/availability/alerts.service.js";
 
 const env = loadEnv(process.env);
 const clients = createSupabaseClients(env);
@@ -60,11 +63,13 @@ const server = createApp({
   console.log(`Backend listening on http://localhost:${env.port}`);
 });
 
-const stopAvailabilityPoller = startAvailabilityPoller(
-  logAvailabilityNotification,
-  undefined,
-  availabilityRepository,
-);
+const stopAvailabilityPoller = startAvailabilityPoller(availabilityRepository, {
+  checkAlerts: () =>
+    checkAvailabilityAlerts(logAvailabilityNotification, {
+      alerts: alertRepository,
+      availability: availabilityRepository,
+    }),
+});
 
 function shutdown(): void {
   stopAvailabilityPoller();

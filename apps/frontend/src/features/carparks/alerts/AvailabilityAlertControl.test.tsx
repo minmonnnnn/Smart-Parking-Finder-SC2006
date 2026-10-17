@@ -14,6 +14,10 @@ vi.mock("./api", () => ({
   updateAvailabilityAlert: vi.fn(),
 }));
 
+vi.mock("./AvailabilityAlertMonitor", () => ({
+  AvailabilityAlertMonitor: () => null,
+}));
+
 function renderControl() {
   return render(
     <AvailabilityAlertControl

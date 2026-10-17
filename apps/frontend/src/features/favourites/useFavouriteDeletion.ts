@@ -6,6 +6,13 @@ interface PendingDeletion {
   deleting: boolean
 }
 
+/**
+ * Manages delayed deletion of favourite locations.
+ *
+ * A favourite is hidden immediately from the UI but the backend deletion is delayed for five seconds. During this period the user
+ * can undo the deletion. This implements the error-recovery behaviour specified for the favourites interface.
+ * @param remove Function used to permanently delete the favourite.
+ */
 export function useFavouriteDeletion(remove: (id: number) => Promise<void>) {
   const pendingRef = useRef<PendingDeletion | null>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)

@@ -7,6 +7,13 @@ import type { AuthContextValue, AuthSession, LoginRequest, RegisterRequest } fro
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
+/**
+ * Provides authentication state, profile data and authentication
+ * operations to the React component tree.
+ *
+ * The provider maintains the current session and exposes registration,
+ * login, logout, profile update and account deletion operations.
+ */
 export function AuthProvider({ children }: PropsWithChildren) {
   const [session, setSession] = useState<AuthSession | null>(() => loadSession())
   const sessionRef = useRef(session)
@@ -148,7 +155,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
+/**
+ * Returns the current authentication context.
+ *
+ * Must be called from a component rendered inside AuthProvider.
+ */
 export function useAuth(): AuthContextValue {
   const context = useContext(AuthContext)
   if (!context) throw new Error('useAuth must be used within an AuthProvider')

@@ -1,6 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createAvailabilityRepository } from "../repository.js";
+import {
+  createAvailabilityRepository,
+  getAvailabilityForCarparks,
+} from "../repository.js";
 
 interface DatabaseResult {
   data: unknown;
@@ -226,5 +229,70 @@ describe("Supabase availability repository", () => {
     await expect(
       createAvailabilityRepository(database).getAvailabilityByCarParkNo("AK19"),
     ).rejects.toBe(failure);
+  });
+});
+
+describe("bulk availability lookup", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(fetchedAt.getTime() + 4 * 60_000));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("does not query the database for an empty list", async () => {
+    const { database, calls } = mockDatabase([]);
+
+    const result = await getAvailabilityForCarparks(database, []);
+
+    expect(result.size).toBe(0);
+    expect(calls).toEqual([]);
+  });
+
+  it("batches IDs and derives availability from saved timestamps", async () => {
+    const ids = Array.from({ length: 401 }, (_, index) => `P${index}`);
+    const row = {
+      available_lots: 20,
+      total_lots: 100,
+      fetched_at: fetchedAt.toISOString(),
+    };
+
+    const { database, calls } = mockDatabase([
+      {
+        data: [{ ...row, car_park_no: "P0" }],
+        error: null,
+      },
+      {
+        data: [{ ...row, car_park_no: "P400" }],
+        error: null,
+      },
+    ]);
+
+    const result = await getAvailabilityForCarparks(database, ids);
+
+    expect(result.size).toBe(2);
+    expect(result.get("P0")).toEqual({
+      availableLots: 20,
+      totalLots: 100,
+      status: "Moderate",
+      lastUpdated: fetchedAt.toISOString(),
+      isStale: true,
+    });
+    expect(result.has("P400")).toBe(true);
+    expect(result.has("P1")).toBe(false);
+
+    expect(calls).toContainEqual(["in", "car_park_no", ids.slice(0, 400)]);
+    expect(calls).toContainEqual(["in", "car_park_no", ["P400"]]);
+  });
+
+  it("propagates database failures to the caller", async () => {
+    const error = { message: "Database unavailable" };
+    const { database } = mockDatabase([{ data: null, error }]);
+
+    await expect(getAvailabilityForCarparks(database, ["AK19"])).rejects.toBe(
+      error,
+    );
   });
 });

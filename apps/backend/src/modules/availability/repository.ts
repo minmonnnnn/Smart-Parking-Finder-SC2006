@@ -111,3 +111,38 @@ export function createAvailabilityRepository(
     },
   };
 }
+
+export async function getAvailabilityForCarparks(
+  client: SupabaseClient,
+  carParkNos: string[],
+): Promise<Map<string, AvailabilityInfo>> {
+  const ids = [...new Set(carParkNos)];
+  const result = new Map<string, AvailabilityInfo>();
+
+  for (let offset = 0; offset < ids.length; offset += 400) {
+    const { data, error } = await client
+      .from("carpark_availability_cache")
+      .select("car_park_no,available_lots,total_lots,fetched_at")
+      .in("car_park_no", ids.slice(offset, offset + 400));
+
+    if (error) throw error;
+    if (!data) throw new Error("Missing availability lookup result");
+
+    const rows = data as (AvailabilityRow & {
+      car_park_no: string;
+    })[];
+
+    for (const row of rows) {
+      result.set(
+        row.car_park_no,
+        buildAvailabilityInfo(
+          row.available_lots,
+          row.total_lots,
+          new Date(row.fetched_at),
+        ),
+      );
+    }
+  }
+
+  return result;
+}

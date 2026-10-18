@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import styles from './NavigationPage.module.css';
 import { NavigationMap } from '../features/navigation/components/NavigationMap';
 import { NavigationBottomSheet } from '../features/navigation/components/NavigationBottomSheet';
@@ -10,6 +10,7 @@ import { getCarparkDetails } from '../features/search/carparkApi';
 import { searchDestinations, resolveDestination,getNearbyCarparks, } from '../features/search/searchApi';
 import { useNavigationRoutes } from '../features/navigation/hooks/useNavigationRoutes';
 import { useWeather } from '../features/navigation/hooks/weather';
+import { getGoogleMapsApiKey } from '../lib/googleMaps';
 import {SAMPLE_ORIGIN, DEFAULT_CARPARK, DEFAULT_DESTINATION, POPULAR_DESTINATIONS,POPULAR_CARPARKS} from '../features/navigation/constants';
 import type { NavigationPageProps, PlaceItem,NavDestination } from '../features/navigation/types';
 
@@ -19,6 +20,7 @@ export function NavigationPage({
   initialCarparkDetails,
   onNavigate,
 }: NavigationPageProps) {
+  const apiKey = getGoogleMapsApiKey();
   const initialCp = initialCarparkDetails? {
       lat: initialCarparkDetails.carpark.latitude,
       lng: initialCarparkDetails.carpark.longitude,
@@ -28,6 +30,10 @@ export function NavigationPage({
     : DEFAULT_CARPARK;
 
   const [originLocation, setOriginLocation] = useState(SAMPLE_ORIGIN);
+  const originLocationRef = useRef(originLocation);
+  useEffect(() => {
+    originLocationRef.current = originLocation;
+  }, [originLocation]);
   const [carparkLocation, setCarparkLocation] = useState(initialCp);
   const [destinationLocation, setDestinationLocation] = useState<NavDestination>(
     initialCarparkDetails? {
@@ -164,28 +170,72 @@ export function NavigationPage({
     const timer = setTimeout(async () => {
       setIsSearching(true);
       try {
-        const data = await searchDestinations(searchQuery);
-        if (Array.isArray(data) && data.length > 0) {
-          setSuggestions(
-            data.map((item) => ({
-              placeId: item.placeId,main: item.name,sub: item.address || 'Singapore',name: item.name
-            }))
-          );
-          return;
-        }
-      } catch {
-        // Fall through to popular destinations fallback
-      }
+        let items: PlaceItem[] = [];
 
-      const matches = POPULAR_DESTINATIONS.filter((d) =>
-        d.main.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      setSuggestions(matches);
-      setIsSearching(false);
+        try {
+          const data = await searchDestinations(searchQuery);
+          if (Array.isArray(data) && data.length > 0) {
+            items = data.map((item) => ({
+              placeId: item.placeId,
+              main: item.name,
+              sub: item.address || 'Singapore',
+              name: item.name,
+            }));
+          }
+        } catch {
+          //call google places fallback
+        }
+
+        //google places autocomplete fallback if backend returned no results
+        if (items.length === 0 && apiKey) {
+          try {
+            const res = await fetch('https://places.googleapis.com/v1/places:autocomplete', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-Goog-Api-Key': apiKey,
+              },
+              body: JSON.stringify({
+                input: searchQuery,
+                includedRegionCodes: ['sg'],
+              }),
+            });
+            const json = await res.json();
+            if (json.suggestions && Array.isArray(json.suggestions) && json.suggestions.length > 0) {
+              items = json.suggestions.map((item: {
+                placePrediction?: {
+                  placeId?: string;
+                  place?: string;
+                  structuredFormat?: { mainText?: { text?: string }; secondaryText?: { text?: string } };
+                  text?: { text?: string };
+                };
+              }) => ({
+                placeId: item.placePrediction?.placeId || item.placePrediction?.place || '',
+                main: item.placePrediction?.structuredFormat?.mainText?.text || item.placePrediction?.text?.text || 'Location',
+                sub: item.placePrediction?.structuredFormat?.secondaryText?.text || 'Singapore',
+                name: item.placePrediction?.structuredFormat?.mainText?.text || item.placePrediction?.text?.text || 'Location',
+              }));
+            }
+          } catch {
+            //popular destinations fallback
+          }
+        }
+
+        if (items.length > 0) {
+          setSuggestions(items);
+        } else {
+          const matches = POPULAR_DESTINATIONS.filter((d) =>
+            d.main.toLowerCase().includes(searchQuery.toLowerCase())
+          );
+          setSuggestions(matches);
+        }
+      } finally {
+        setIsSearching(false);
+      }
     }, 280);
 
     return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [searchQuery, apiKey]);
 
   //get recommended carparks from recommendation
   const fetchNearbyCarparks = useCallback(
@@ -194,7 +244,10 @@ export function NavigationPage({
       setShowCarparksList(true);
       try {
         const data = await getNearbyCarparks({
-          destinationLat: destLat, destinationLng: destLng, originLat: originLocation.lat, originLng: originLocation.lng,
+          destinationLat: destLat,
+          destinationLng: destLng,
+          originLat: originLocationRef.current.lat,
+          originLng: originLocationRef.current.lng,
           filters: {
             ...(evFilter === 'yes' ? { evChargingOnly: true } : {}),
             ...(shelteredFilter === 'yes' ? { shelteredOnly: true } : {}),
@@ -278,8 +331,6 @@ export function NavigationPage({
       setIsLoadingCarparks(false);
     },
     [
-      originLocation.lat,
-      originLocation.lng,
       evFilter,
       shelteredFilter,
       availabilityFilter,
@@ -307,10 +358,6 @@ export function NavigationPage({
 
   //select destination 
   const handleSelectPlace = async (place: PlaceItem) => {
-    setIsSheetVisible(false);
-    setShowCarparksList(true);
-    setIsLoadingCarparks(true);
-
     let lat = place.lat;
     let lng = place.lng;
     const name = place.main || place.name || 'Selected Destination';
@@ -323,11 +370,30 @@ export function NavigationPage({
           lng = resolved.longitude;
         }
       } catch {
-        //potential fallback
+        // Fall through to Google Places API fallback
+      }
+
+      if ((lat === undefined || lng === undefined) && apiKey) {
+        try {
+          const detailRes = await fetch(
+            `https://places.googleapis.com/v1/places/${place.placeId}?fields=id,displayName,location&key=${apiKey}`
+          );
+          const detailData = await detailRes.json();
+          if (detailData.location?.latitude && detailData.location?.longitude) {
+            lat = detailData.location.latitude;
+            lng = detailData.location.longitude;
+          }
+        } catch {
+          // Fall through; if resolution fails, coordinates remain undefined
+        }
       }
     }
 
     if (lat !== undefined && lng !== undefined) {
+      setIsSheetVisible(false);
+      setShowCarparksList(true);
+      setIsLoadingCarparks(true);
+
       setDestinationLocation({
         ...place,
         placeId: place.placeId || 'dest-selected',
@@ -338,8 +404,6 @@ export function NavigationPage({
         lng,
       });
       await fetchNearbyCarparks(lat, lng);
-    } else {
-      setIsLoadingCarparks(false);
     }
   };
 

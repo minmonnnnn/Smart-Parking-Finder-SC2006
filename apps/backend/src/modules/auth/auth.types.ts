@@ -1,5 +1,13 @@
 import type { LoginRequest, RegisterRequest, UpdateProfileRequest, User } from '@smart-parking/shared-types'
 
+/**
+ * Abstraction over the external authentication and profile storage system.
+ *
+ * Application services depend on this interface instead of directly
+ * depending on Supabase, reducing coupling between application logic
+ * and the authentication provider.
+ */
+
 export interface AuthGateway {
   register(input: RegisterRequest): Promise<{ userId: string }>
   createProfile(userId: string, input: Pick<RegisterRequest, 'name' | 'vehicleType'>): Promise<void>

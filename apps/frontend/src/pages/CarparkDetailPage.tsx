@@ -30,6 +30,15 @@ function Row({ label, value }: { label: string; value: string }) {
   )
 }
 
+/**
+ * Detail view for a single carpark. Fetches live data on mount and displays
+ * availability, static info, current weather, and navigate/save-to-favourites actions.
+ * @param carParkNo - The HDB carpark code to load
+ * @param initialDetails - Optional pre-fetched data to show immediately before the API responds
+ * @param onBack - Called when the user taps the back button
+ * @param onNavigate - Called with the loaded details when the user taps Navigate
+ * @param isOverlay - When true, renders as a floating overlay rather than a full-screen page
+ */
 export function CarparkDetailPage({
   carParkNo,
   initialDetails,

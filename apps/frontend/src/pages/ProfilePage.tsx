@@ -8,6 +8,8 @@ interface ProfilePageProps {
   onAccountDeleted(): void
 }
 
+
+// Displays and allows modification of the authenticated user's profile, including account deletion
 export function ProfilePage({ onAccountDeleted }: ProfilePageProps) {
   const { session, profile, loading, error, loadProfile, updateProfile, deleteAccount } = useAuth()
   const [editing, setEditing] = useState(false)

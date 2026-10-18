@@ -12,20 +12,15 @@ import {
   getNearbyCarparks,
 } from "./searchApi";
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
 type YesNo = "yes" | "no";
 type AvailabilityLevel = "high" | "moderate" | "low";
 
+/** Derives a three-tier availability level from lot counts. */
 function availabilityLevel(available: number, total: number): AvailabilityLevel {
   const pct = progressPercent(available, total);
   return pct >= 30 ? "high" : pct >= 10 ? "moderate" : "low";
 }
 
-// ---------------------------------------------------------------------------
-// Icons
-// ---------------------------------------------------------------------------
 const navigateIcon = (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
     <path d="M3 11 22 2l-9 19-2-8-8-2Z" />
@@ -54,9 +49,6 @@ const chevronDownIcon = (
   </svg>
 );
 
-// ---------------------------------------------------------------------------
-// Dropdown primitives
-// ---------------------------------------------------------------------------
 function DropdownMenu({ children }: { children: ReactNode }) {
   return (
     <div style={{
@@ -120,15 +112,13 @@ function FilterPill({ label, active, expanded, onClick }: {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Carpark card
-// ---------------------------------------------------------------------------
 function availabilityTone(pct: number): "success" | "warning" | "danger" {
   if (pct >= 30) return "success";
   if (pct >= 10) return "warning";
   return "danger";
 }
 
+/** Formats a distance in metres to a human-readable string (e.g. "350 m", "1.2 km"). */
 function formatDistance(m: number): string {
   return m < 1000 ? `${m} m` : `${(m / 1000).toFixed(1)} km`;
 }
@@ -213,9 +203,6 @@ function CarparkCard({ item, onSelect }: { item: RankedCarpark; onSelect?: () =>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Degraded services banner
-// ---------------------------------------------------------------------------
 function DegradedBanner({ services }: { services: CarparkDataService[] }) {
   if (services.length === 0) return null;
   const labels: Record<CarparkDataService, string> = {
@@ -236,9 +223,6 @@ function DegradedBanner({ services }: { services: CarparkDataService[] }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// Search bar with autocomplete
-// ---------------------------------------------------------------------------
 function SearchBar({
   query, onChange, onSearch, onSelectSuggestion, suggestions, showSuggestions,
   evFilter, onEvFilter, shelteredFilter, onShelteredFilter, pricingAsc, onPricingAsc,
@@ -272,7 +256,6 @@ function SearchBar({
       background: "rgba(255,255,255,0.95)", backdropFilter: "blur(6px)",
       WebkitBackdropFilter: "blur(6px)", padding: `${vars.space[2]} ${vars.layout.gutter} ${vars.space[3]}`,
     }}>
-      {/* Pill input + suggestions */}
       <div style={{ position: "relative", width: "90%", margin: "0 auto" }}>
         <div style={{
           display: "flex", alignItems: "center", border: `1.5px solid ${vars.color.border}`,
@@ -307,7 +290,6 @@ function SearchBar({
           </button>
         </div>
 
-        {/* Autocomplete suggestions */}
         {showSuggestions && suggestions.length > 0 && (
           <div style={{
             position: "absolute", top: "100%", left: 0, right: 0, marginTop: 4,
@@ -337,7 +319,6 @@ function SearchBar({
         )}
       </div>
 
-      {/* Filter chip panel */}
       {filtersOpen && (
         <div style={{ marginTop: vars.space[2], display: "flex", justifyContent: "space-between", gap: 4 }}>
           <div style={{ position: "relative", flex: 1 }}>
@@ -399,9 +380,6 @@ function SearchBar({
   );
 }
 
-// ---------------------------------------------------------------------------
-// Page
-// ---------------------------------------------------------------------------
 export interface InitialDestination {
   query: string;
   address?: string;
@@ -414,6 +392,12 @@ export interface SearchPageProps {
   initialDestination?: InitialDestination | null;
 }
 
+/**
+ * Main search page. Shows a full-screen map with an autocomplete search bar overlay.
+ * On destination select, fetches ranked nearby carparks and displays them as cards.
+ * @param onSelectCarpark - Called with the carpark ID when the user taps Navigate on a card
+ * @param initialDestination - Pre-fills and triggers a search (used when returning from navigation)
+ */
 export default function SearchPage({
   onSelectCarpark,
   initialDestination,
@@ -436,7 +420,6 @@ export default function SearchPage({
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Debounced autocomplete
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
@@ -450,12 +433,13 @@ export default function SearchPage({
         setSuggestions(results);
         setShowSuggestions(true);
       } catch {
-        // silently ignore autocomplete errors
+        // autocomplete errors are non-fatal; the user can keep typing
       }
     }, 300);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [query]);
 
+  /** Resolves the selected suggestion to coordinates and fetches nearby carparks. */
   async function handleSelectSuggestion(s: DestinationSuggestion) {
     setQuery(s.name);
     setShowSuggestions(false);
@@ -484,6 +468,7 @@ export default function SearchPage({
     }
   }
 
+  /** Fetches nearby carparks for an explicit lat/lng (e.g. current location or returning from navigation). */
   const searchByCoordinates = useCallback(async (lat: number, lng: number, label: string) => {
     setQuery(label);
     setShowSuggestions(false);
@@ -528,6 +513,7 @@ export default function SearchPage({
     }
   }, [initialDestination, searchByCoordinates]);
 
+  /** Selects the top autocomplete suggestion on Enter key press. */
   function handleSearch() {
     if (suggestions.length > 0) {
       void handleSelectSuggestion(suggestions[0]!);
@@ -549,7 +535,6 @@ export default function SearchPage({
     setAvailabilityFilter(new Set());
   }
 
-  // Client-side filter + sort on the returned results
   const results = carparks
     .filter((r) => evFilter === null || (evFilter === "yes" ? r.carpark.hasEvCharging : !r.carpark.hasEvCharging))
     .filter((r) => shelteredFilter === null || (shelteredFilter === "yes" ? r.carpark.isSheltered : !r.carpark.isSheltered))
@@ -596,7 +581,6 @@ export default function SearchPage({
     ...filterProps,
   };
 
-  // ── Home state ──
   if (!searched) {
     return (
       <div style={sharedStyle}>
@@ -618,7 +602,6 @@ export default function SearchPage({
     );
   }
 
-  // ── Results state ──
   return (
     <div style={{ ...sharedStyle, display: "flex", flexDirection: "column", background: vars.color.background }}>
 

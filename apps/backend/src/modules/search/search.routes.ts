@@ -5,10 +5,14 @@ import { getNearbyCarparks, getCarparkDetails } from './search.service.js';
 import { searchDestinations, resolveDestination } from './destinations.service.js';
 import type { CarparkFilters, CarparkSort } from '@smart-parking/shared-types';
 
+/**
+ * Registers carpark and destination search routes on an Express router.
+ * Handles input validation and maps service-layer errors to HTTP status codes.
+ * @param adminClient - Supabase admin client passed through to the service layer
+ */
 export function createSearchRouter(adminClient: SupabaseClient): Router {
   const router = Router();
 
-  // GET /api/carparks/nearby
   router.get('/carparks/nearby', async (req: Request, res: Response) => {
     const { destinationLat, destinationLng, originLat, originLng, sort, ...rest } = req.query;
 
@@ -66,7 +70,6 @@ export function createSearchRouter(adminClient: SupabaseClient): Router {
     }
   });
 
-  // GET /api/carparks/:carParkNo
   router.get('/carparks/:carParkNo', async (req: Request, res: Response) => {
     const carParkNo = req.params['carParkNo'] as string;
     const details = await getCarparkDetails(adminClient, carParkNo);
@@ -76,7 +79,6 @@ export function createSearchRouter(adminClient: SupabaseClient): Router {
     return res.status(200).json(details);
   });
 
-  // GET /api/destinations/search?query=<text>  FR3–FR4
   router.get('/destinations/search', async (req: Request, res: Response) => {
     const query = req.query['query'] as string | undefined;
     if (!query?.trim()) {
@@ -90,7 +92,6 @@ export function createSearchRouter(adminClient: SupabaseClient): Router {
     }
   });
 
-  // GET /api/destinations/:placeId/resolve  FR5–FR6
   router.get('/destinations/:placeId/resolve', async (req: Request, res: Response) => {
     const placeId = req.params['placeId'] as string;
     try {

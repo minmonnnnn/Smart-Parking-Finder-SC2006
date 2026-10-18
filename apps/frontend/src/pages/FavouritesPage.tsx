@@ -11,6 +11,7 @@ interface FavouritesPageProps {
   onSearch(): void
 }
 
+// Displays the authenticated user's saved locations and supports selection, renaming and deletion with undo
 export function FavouritesPage({ onSelect, onSearch }: FavouritesPageProps) {
   const { session } = useAuth()
   return <FavouritesSession key={session?.token ?? ''} token={session?.token} onSelect={onSelect} onSearch={onSearch} />

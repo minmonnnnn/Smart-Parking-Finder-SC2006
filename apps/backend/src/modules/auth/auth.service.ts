@@ -6,8 +6,27 @@ function unavailable(): ApiException {
   return new ApiException(503, 'EXTERNAL_SERVICE_UNAVAILABLE', 'Authentication service unavailable')
 }
 
+/**
+ * Creates the authentication service used to coordinate user
+ * registration, login, profile management, and account deletion.
+ *
+ * The service depends on AuthGateway rather than a concrete
+ * authentication provider so that authentication infrastructure
+ * can be replaced without changing the application logic.
+ *
+ * @param gateway Authentication and profile persistence gateway.
+ */
+
 export function createAuthService(gateway: AuthGateway) {
   return {
+    /**
+     * Registers a new user and creates the corresponding profile.
+     *
+     * If profile creation fails after the authentication account is created, the service attempts to remove the new auth user
+     * to avoid leaving an incomplete account.
+     *
+     * @throws ApiException if the account already exists or the authentication service is unavailable.
+     */
     async register(input: RegisterRequest): Promise<RegisterResponse> {
       let userId: string
       try {
@@ -32,6 +51,10 @@ export function createAuthService(gateway: AuthGateway) {
       return { userId, email: input.email, name: input.name }
     },
 
+    /**
+     * Authenticates a user using the supplied credentials
+     * @throws ApiException if the credentials are invalid or the authentication provider is unavailable.
+     */
     async login(input: LoginRequest): Promise<LoginResponse> {
       try {
         return await gateway.login(input)

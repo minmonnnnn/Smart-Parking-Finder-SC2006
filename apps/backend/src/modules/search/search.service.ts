@@ -1,13 +1,3 @@
-/**
- * GET /api/carparks/nearby orchestrator — owner: Min
- * FR8–FR10, FR43–FR49, UC-01
- *
- * Calls Moufooza's carpark DB, Xi Fei's availability cache, Xavier's routing
- * functions, and Nigel's recommendation engine. Partial failures are caught
- * individually; degraded services are listed in the response so the frontend
- * can show a banner rather than an error screen.
- */
-
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type {
   Carpark,
@@ -28,6 +18,7 @@ import { getWeather } from '../weather/weather.service.js';
 
 const AVAILABILITY_STATUS_RANK = { High: 3, Moderate: 2, Low: 1, Unavailable: 0 } as const;
 
+/** Returns a zero-lot availability record used when the cache has no data for a carpark. */
 function fallbackAvailability(): AvailabilityInfo {
   return {
     availableLots: 0,
@@ -38,6 +29,7 @@ function fallbackAvailability(): AvailabilityInfo {
   };
 }
 
+/** Returns true if the carpark satisfies all active user filters. */
 function passesFilters(
   carpark: Carpark,
   availability: AvailabilityInfo,
@@ -63,6 +55,16 @@ export interface NearbyCarparksInput {
   filters?: CarparkFilters;
 }
 
+/**
+ * Orchestrates the nearby carpark search pipeline:
+ * weather → DB candidates → availability → routing → historical → scoring → sort.
+ * Each upstream service failure is caught individually; the caller receives a
+ * `degradedServices` list so the frontend can show a banner rather than an error.
+ *
+ * @param client - Supabase admin client for DB access
+ * @param input - Destination coordinates, optional user origin, sort order, and filters
+ * @returns Ranked carpark list and names of any services that failed
+ */
 export async function getNearbyCarparks(
   client: SupabaseClient,
   input: NearbyCarparksInput,
@@ -78,7 +80,6 @@ export async function getNearbyCarparks(
 
   const degradedServices: CarparkDataService[] = [];
 
-  // 1. Fetch weather for the destination (Moufooza — FR24–FR26)
   let rainExpected = false;
   try {
     const weather = await getWeather(destinationLat, destinationLng);
@@ -87,12 +88,10 @@ export async function getNearbyCarparks(
     degradedServices.push('weather');
   }
 
-  // 3. Fetch candidate carparks from DB
   let carparks: Carpark[];
   try {
     carparks = await getCarparksNearby(client, destinationLat, destinationLng);
   } catch {
-    // Static carpark data unavailable — cannot produce results
     throw new Error('EXTERNAL_SERVICE_UNAVAILABLE');
   }
 
@@ -100,7 +99,6 @@ export async function getNearbyCarparks(
     return { carparks: [], degradedServices };
   }
 
-  // 2. Pre-filter candidate carparks by user filters and compute proximity
   const filteredCandidates = carparks
     .map((carpark) => {
       let availability: AvailabilityInfo;
@@ -115,10 +113,8 @@ export async function getNearbyCarparks(
         availability = fallbackAvailability();
       }
 
-      // Apply filters before paying for routing calls
       if (!passesFilters(carpark, availability, filters)) return null;
 
-      // Walking distance (straight-line Haversine pre-filter)
       const walkingDistanceKm = calculateDistanceKm(
         carpark.latitude, carpark.longitude,
         destinationLat, destinationLng,
@@ -137,21 +133,17 @@ export async function getNearbyCarparks(
     return { carparks: [], degradedServices };
   }
 
-  // Sort candidates by proximity to destination
   filteredCandidates.sort((a, b) => a.walkingDistanceMeters - b.walkingDistanceMeters);
 
-  // Limit live routing calls to top 10 closest matching carparks (Option B)
   const MAX_CANDIDATES = 10;
   const topCandidates = filteredCandidates.slice(0, MAX_CANDIDATES);
 
-  // 3. Enrich top candidates in parallel with live routes and recommendation scores
   const now = new Date();
   const arrivalDayOfWeek = now.getDay();
   const arrivalHour = now.getHours();
 
   const enriched = await Promise.all(
     topCandidates.map(async ({ carpark, availability, walkingDistanceMeters }): Promise<RankedCarpark> => {
-      // Walking ETA (Xavier)
       let walkingEtaMinutes = Math.max(1, Math.round(walkingDistanceMeters / 75));
       try {
         const walkRoute = await getWalkingRoute(
@@ -163,7 +155,6 @@ export async function getNearbyCarparks(
         if (!degradedServices.includes('routing')) degradedServices.push('routing');
       }
 
-      // Driving ETA (Xavier) — only when origin is provided
       let drivingEtaMinutes: number | null = null;
       if (originLat !== undefined && originLng !== undefined) {
         try {
@@ -174,7 +165,6 @@ export async function getNearbyCarparks(
         }
       }
 
-      // Historical availability (Nigel)
       let historicalRatio: number | null = null;
       try {
         historicalRatio = await getHistoricalAvailabilityRatio(
@@ -186,7 +176,6 @@ export async function getNearbyCarparks(
         if (!degradedServices.includes('historical')) degradedServices.push('historical');
       }
 
-      // Recommendation score (Nigel)
       let recommendationScore = 0;
       const realTimeRatio =
         availability.totalLots > 0
@@ -205,7 +194,7 @@ export async function getNearbyCarparks(
           recommendationScore = result.finalScore;
         }
       } catch {
-        // Non-fatal — score stays 0
+        // score stays 0
       }
 
       return {
@@ -228,6 +217,12 @@ export async function getNearbyCarparks(
   return { carparks: enriched, degradedServices };
 }
 
+/**
+ * Returns static carpark data combined with live availability for a single carpark.
+ * @param client - Supabase admin client
+ * @param carParkNo - The HDB carpark code (e.g. "HG9")
+ * @returns Carpark details, or null if the carpark is not in the database
+ */
 export async function getCarparkDetails(
   client: SupabaseClient,
   carParkNo: string,

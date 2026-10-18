@@ -37,10 +37,12 @@ const drivingRouteCache = new Map<string, CacheEntry<DrivingRoute>>();
 const walkingRouteCache = new Map<string, CacheEntry<WalkingRoute>>();
 const ROUTE_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
+//generates a cache to store identical routes
 function makeRouteKey(oLat: number, oLng: number, dLat: number, dLng: number): string {
   return `${oLat.toFixed(4)},${oLng.toFixed(4)}->${dLat.toFixed(4)},${dLng.toFixed(4)}`;
 }
 
+//retrieve the google api from env
 function getRoutingApiKey(): string {
   const rawKey = process.env.GOOGLE_MAPS_API_KEY;
   if (!rawKey) {

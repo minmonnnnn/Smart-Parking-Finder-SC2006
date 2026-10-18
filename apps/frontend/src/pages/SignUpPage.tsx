@@ -9,6 +9,7 @@ interface SignUpPageProps {
   onSwitchMode(): void
 }
 
+// Displays the registration form used to create a new account
 export function SignUpPage({ onSwitchMode }: SignUpPageProps) {
   const { register } = useAuth()
   const [name, setName] = useState('')

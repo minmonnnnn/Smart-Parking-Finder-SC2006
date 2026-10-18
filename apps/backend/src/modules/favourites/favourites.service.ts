@@ -1,6 +1,12 @@
 import type { CreateFavouriteRequest, FavouriteLocation, RenameFavouriteRequest } from '@smart-parking/shared-types'
 import { ApiException } from '../../lib/errors/index.js'
 
+/**
+ * Persistence abstraction for user favourite locations.
+ *
+ * Implementations must scope all operations to the authenticated user
+ * so that users cannot access or modify another user's favourites.
+ */
 export interface FavouriteGateway {
   list(userId: string): Promise<FavouriteLocation[]>
   create(userId: string, input: CreateFavouriteRequest): Promise<FavouriteLocation>
@@ -16,6 +22,13 @@ function notFound(): ApiException {
   return new ApiException(404, 'NOT_FOUND', 'Favourite not found')
 }
 
+/**
+ * Creates the service responsible for managing favourite locations.
+ *
+ * The service handles user-scoped retrieval, duplicate detection,
+ * renaming, deletion, and conversion of persistence failures into
+ * application-level API errors.
+ */
 export function createFavouritesService(gateway: FavouriteGateway) {
   return {
     async list(userId: string): Promise<FavouriteLocation[]> {

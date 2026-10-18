@@ -9,6 +9,7 @@ interface SignInPageProps {
   onSwitchMode(): void
 }
 
+// Displays the form used to authenticate an existing user
 export function SignInPage({ onSignedIn, onSwitchMode }: SignInPageProps) {
   const { login } = useAuth()
   const [email, setEmail] = useState('')

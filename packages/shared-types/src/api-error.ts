@@ -1,11 +1,19 @@
+/** Error response shape used by backend endpoints. */
 export interface ApiError {
   error: {
+    /** Machine-readable error code. */
     code: ApiErrorCode;
+    /** Human-readable message describing the failure. */
     message: string;
+    /** Optional additional information about the error. */
     details?: unknown;
   };
 }
 
+/**
+ * Error codes shared by backend endpoints. FR41–FR43 cover destination,
+ * no-carpark, and external-service errors.
+ */
 export type ApiErrorCode =
   | "DESTINATION_NOT_FOUND" // FR41
   | "NO_CARPARKS_FOUND" // FR42

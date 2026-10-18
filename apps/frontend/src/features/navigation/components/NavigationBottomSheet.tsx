@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import styles from '../../../pages/NavigationPage.module.css';
-import type { RouteInfo, SearchTargetMode, WalkingInfo } from '../types';
+import type { RouteInfo, WalkingInfo } from '../types';
 import type { WeatherInfo } from '@smart-parking/shared-types';
 
 export interface NavigationBottomSheetProps {
@@ -14,11 +14,11 @@ export interface NavigationBottomSheetProps {
   isCalculating?: boolean;
   isSheetCollapsed?: boolean;
   onToggleCollapse?: () => void;
-  onOpenTargetSearch?: (target: SearchTargetMode) => void;
   onCancelNav?: () => void;
   weatherAlert?: string;
-  weatherInfo?: WeatherInfo | null; // <-- Added prop
+  weatherInfo?: WeatherInfo | null;
 }
+
 
 function extractAreaName(name?: string): string {
   if (!name) return 'Bishan';
@@ -48,13 +48,14 @@ export function NavigationBottomSheet({
   const lotsRemaining = carpark?.availableLots ?? 42;
   const areaName = extractAreaName(carparkName);
 
-  // Gesture handling for sliding up and down
+  //needed for handling sliding animation
   const [dragOffsetY, setDragOffsetY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartYRef = useRef<number | null>(null);
   const hasDraggedRef = useRef(false);
   const justDraggedRef = useRef(false);
 
+  //downward animation
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.button !== 0 && e.pointerType === 'mouse') return;
     dragStartYRef.current = e.clientY;
@@ -63,7 +64,7 @@ export function NavigationBottomSheet({
     try {
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     } catch {
-      // Ignored if unsupported
+      //do nth
     }
   };
 
@@ -76,22 +77,21 @@ export function NavigationBottomSheet({
     }
 
     if (isSheetCollapsed) {
-      // Collapsed: can drag upwards (negative diff)
       if (diff < 0) {
         setDragOffsetY(diff);
       } else {
-        setDragOffsetY(diff * 0.2); // rubber-band downward resistance
+        setDragOffsetY(diff * 0.2);
       }
     } else {
-      // Expanded: can drag downwards (positive diff)
       if (diff > 0) {
         setDragOffsetY(diff);
       } else {
-        setDragOffsetY(diff * 0.2); // rubber-band upward resistance
+        setDragOffsetY(diff * 0.2);
       }
     }
   };
 
+  //upward animation
   const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     if (dragStartYRef.current === null) return;
     const diff = e.clientY - dragStartYRef.current;
@@ -101,7 +101,7 @@ export function NavigationBottomSheet({
     try {
       (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
     } catch {
-      // Ignored
+      //do nth
     }
 
     if (hasDraggedRef.current) {
@@ -132,25 +132,23 @@ export function NavigationBottomSheet({
     onToggleCollapse?.();
   };
 
-  // Format walking distance (e.g. 200m or 1.2 km)
+  //format walking distance
   const walkingDist = walkingInfo?.distanceMeters ?? 200;
   const isDirectCarpark = walkingDist <= 50;
   const formattedWalkDistance = isDirectCarpark
     ? 'At Carpark'
     : walkingDist >= 1000
-    ? `${(walkingDist / 1000).toFixed(1)} km`
-    : `${walkingDist}m`;
+      ? `${(walkingDist / 1000).toFixed(1)} km`
+      : `${walkingDist}m`;
 
   return (
     <div
-      className={`${styles.bottomSheet} ${
-        isSheetCollapsed ? styles.sheetCollapsed : ''
-      } ${isDragging ? styles.bottomSheetDragging : ''}`}
+      className={`${styles.bottomSheet} ${isSheetCollapsed ? styles.sheetCollapsed : ''
+        } ${isDragging ? styles.bottomSheetDragging : ''}`}
       style={{
         transform: dragOffsetY !== 0 ? `translateY(${dragOffsetY}px)` : undefined,
       }}
     >
-      {/* Draggable Zone (Handle + Header) to slide up and down */}
       <div
         className={styles.dragZone}
         onPointerDown={handlePointerDown}
@@ -158,7 +156,6 @@ export function NavigationBottomSheet({
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerCancel}
       >
-        {/* Drag handle to slide/toggle collapse */}
         <div
           className={styles.sheetHandle}
           onClick={handleHeaderClick}
@@ -176,8 +173,6 @@ export function NavigationBottomSheet({
               : 'Drag handle to collapse'
           }
         />
-
-        {/* Header Row: Carpark Name & Lots Left Badge */}
         <div
           className={styles.sheetHeader}
           onClick={handleHeaderClick}
@@ -207,12 +202,8 @@ export function NavigationBottomSheet({
 
       {!isSheetCollapsed && (
         <>
-          {/* Subtle Horizontal Divider */}
           <div className={styles.sheetDivider} />
-
-          {/* Drive & Walk Metric Cards */}
           <div className={styles.metricsGrid}>
-            {/* Drive Card */}
             <div className={styles.metricCard}>
               <div className={styles.metricValue}>
                 {isCalculating
@@ -224,14 +215,13 @@ export function NavigationBottomSheet({
               </div>
             </div>
 
-            {/* Walk Card */}
             <div className={styles.metricCard}>
               <div className={styles.metricValue}>
                 {isCalculating
                   ? '...'
                   : isDirectCarpark
-                  ? '0 min'
-                  : `${walkingInfo?.durationMinutes ?? 2} mins`}
+                    ? '0 min'
+                    : `${walkingInfo?.durationMinutes ?? 2} mins`}
               </div>
               <div className={styles.metricLabel}>
                 Walk ({formattedWalkDistance})
@@ -239,7 +229,6 @@ export function NavigationBottomSheet({
             </div>
           </div>
 
-          {/* Weather Warning or Fair Weather Banner */}
           {weatherInfo?.rainExpected ? (
             <div className={styles.weatherAlertCard}>
               <svg
@@ -301,13 +290,7 @@ export function NavigationBottomSheet({
               </div>
             </div>
           )}
-
-          {/* Full-Width Red Cancel Navigation Button */}
-          <button
-            type="button"
-            className={styles.cancelNavButton}
-            onClick={onCancelNav || (() => window.history.back())}
-          >
+          <button type="button" className={styles.cancelNavButton} onClick={onCancelNav || (() => window.history.back())}>
             Cancel Navigation
           </button>
         </>

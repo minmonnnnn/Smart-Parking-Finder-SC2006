@@ -1,9 +1,16 @@
-import type { PlaceItem } from './types';
+import type { PlaceItem, NavDestination } from './types';
 
 // Default Singapore Locations
 export const SAMPLE_ORIGIN = { lat: 1.3650, lng: 103.8320, name: 'Current Location (Ang Mo Kio Ave 1)' };
 export const DEFAULT_CARPARK = { lat: 1.3585, lng: 103.8375, name: 'Sin Ming Multi-Storey Carpark', availableLots: 48 };
-export const DEFAULT_DESTINATION = { lat: 1.3520, lng: 103.8360, name: 'MacRitchie Reservoir Park' };
+export const DEFAULT_DESTINATION: NavDestination = {
+  placeId: 'dest-default',
+  main: 'MacRitchie Reservoir Park',
+  sub: 'Singapore',
+  name: 'MacRitchie Reservoir Park',
+  lat: 1.3520,
+  lng: 103.8360,
+};
 
 // Curated Singapore Starting Points
 export const POPULAR_ORIGINS: PlaceItem[] = [

@@ -12,13 +12,14 @@ interface UseNavigationRoutesProps {
   destination: { lat: number; lng: number; name: string };
 }
 
+//get driving and walking routes from the api 
 export function useNavigationRoutes({
   origin,
   carpark,
   destination,
 }: UseNavigationRoutesProps) {
   const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
-
+  //placeholder data 
   const [drivingRoutes, setDrivingRoutes] = useState<RouteInfo[]>([
     {
       summary: 'via Sin Ming Rd',
@@ -56,7 +57,7 @@ export function useNavigationRoutes({
     async function fetchLiveRoutes() {
       setIsCalculatingRoute(true);
 
-      // A. Compute Driving Segment: query our Express backend
+      //get driving distance
       let calculatedDriveRoutes: RouteInfo[] = [];
 
       try {
@@ -108,7 +109,7 @@ export function useNavigationRoutes({
         console.warn('Backend /api/routes/driving unreachable, falling back to direct route computation:', err);
       }
 
-      // If backend was unreachable or returned empty, minimal safety fallback
+      //fall for if api calls fails
       if (calculatedDriveRoutes.length === 0) {
         const estDist = parseFloat(
           calculateDistanceKm(origin.lat, origin.lng, carpark.lat, carpark.lng).toFixed(1)
@@ -125,7 +126,7 @@ export function useNavigationRoutes({
         ];
       }
 
-      // B. Compute Walking Segment: query our Express backend
+      //get walking distance
       let calculatedWalk: WalkingInfo = {
         durationMinutes: 4,
         distanceMeters: 350,

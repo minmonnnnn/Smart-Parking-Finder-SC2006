@@ -51,7 +51,7 @@ export function NavigationMap({
     ? 'Google Maps script could not be loaded. Please check network/key permissions.'
     : null;
 
-  // Initialize Google Maps
+  //initialize google maps
   useEffect(() => {
     if (!isLoaded || !mapRef.current || mapInstanceRef.current || !window.google?.maps) return;
 
@@ -64,7 +64,7 @@ export function NavigationMap({
       });
       mapInstanceRef.current = map;
 
-      // Driving Polyline (Blue)
+      //driving Polyline blue
       drivingPolylineRef.current = new window.google.maps.Polyline({
         path: drivingPath || INITIAL_DRIVING_PATH,
         geodesic: true,
@@ -74,7 +74,7 @@ export function NavigationMap({
         map: map,
       });
 
-      // Walking Polyline (Green dashed)
+      //walking Polyline green
       walkingPolylineRef.current = new window.google.maps.Polyline({
         path: walkingPath || INITIAL_WALKING_PATH,
         geodesic: true,
@@ -84,7 +84,7 @@ export function NavigationMap({
         map: map,
       });
 
-      // Origin Marker (A)
+      //starting marker (A)
       originMarkerRef.current = new window.google.maps.Marker({
         position: origin,
         map: map,
@@ -92,7 +92,7 @@ export function NavigationMap({
         label: { text: 'A', color: 'white', fontWeight: 'bold' },
       });
 
-      // Carpark Marker (P)
+      //carpark marker (P)
       carparkMarkerRef.current = new window.google.maps.Marker({
         position: carpark,
         map: map,
@@ -100,7 +100,7 @@ export function NavigationMap({
         label: { text: 'P', color: '#78350F', fontWeight: 'bold' },
       });
 
-      // Destination Marker (B)
+      //Destination Marker (B)
       destMarkerRef.current = new window.google.maps.Marker({
         position: destination,
         map: map,
@@ -112,21 +112,21 @@ export function NavigationMap({
     }
   }, [isLoaded, origin, carpark, destination, drivingPath, walkingPath]);
 
-  // Synchronize driving route path with polyline
+  //synchronise driving route path with polyline
   useEffect(() => {
     if (drivingPolylineRef.current) {
       drivingPolylineRef.current.setPath(drivingPath || []);
     }
   }, [drivingPath]);
 
-  // Synchronize walking route path with polyline
+  //synchronise walking route path with polyline
   useEffect(() => {
     if (walkingPolylineRef.current) {
       walkingPolylineRef.current.setPath(walkingPath || []);
     }
   }, [walkingPath]);
 
-  // Synchronize marker positions, visibility, and map camera bounds
+  //synchronise marker positions, visibility, and map camera bounds
   useEffect(() => {
     if (originMarkerRef.current) {
       originMarkerRef.current.setPosition({ lat: origin.lat, lng: origin.lng });
@@ -179,25 +179,20 @@ export function NavigationMap({
 
   return (
     <>
-      {/* Full-Bleed Google Maps Canvas */}
       <div ref={mapRef} className={styles.mapContainer} />
-
-      {/* Loading state before Google Maps tiles appear */}
       {!isLoaded && !mapError && (
         <div className={styles.mapLoading}>
-          <span>📍 Loading Google Maps Singapore...</span>
+          <span>Loading Google Maps</span>
         </div>
       )}
 
-      {/* Fallback notice if Google Maps JS script fails or API key quota exceeded */}
       {mapError && (
         <div className={styles.mapLoading}>
-          <span>📍 {mapError}</span>
+          <span> {mapError}</span>
           <span className={styles.mapLoadingNotice}>Showing navigation controls below</span>
         </div>
       )}
 
-      {/* Floating My Location GPS Button */}
       <button
         type="button"
         className={`${styles.myLocationButton} ${isLocating ? styles.locating : ''} ${

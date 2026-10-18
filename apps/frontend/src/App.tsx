@@ -18,7 +18,7 @@ function AppShell() {
   const [handoff, setHandoff] = useState('')
   const [selectedCarParkNo, setSelectedCarParkNo] = useState<string | null>(null)
   const [selectedCarparkDetails, setSelectedCarparkDetails] = useState<CarparkDetails | undefined>(undefined)
-  const [selectedDestination, setSelectedDestination] = useState<InitialDestination | null>(null)
+  const [selectedDestination] = useState<InitialDestination | null>(null)
   const [returnPage, setReturnPage] = useState<Page>('search')
 
   const activePage: Page = session

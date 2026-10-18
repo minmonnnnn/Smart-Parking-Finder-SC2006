@@ -1,17 +1,8 @@
-/**
- * Routing and Navigation Service (Owner: Xavier)
- * Fulfills FR21-FR23, FR28-FR34, UC-03, UC-04, UC-09
- *
- * Implements Google Routes API (New) integration with fallback estimation.
- * Exported as reusable async functions so Min's orchestrator and Nigel's
- * scoring engine can call them directly without HTTP overhead (per API_CONTRACT.md).
- */
-
 import type { DrivingRoute, WalkingRoute, TrafficStatus } from '@smart-parking/shared-types';
 
-// Haversine formula to compute great-circle distance in kilometers
+//haversine formula to calculate distance
 export function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371; // Earth's mean radius in km
+  const R = 6371; // earth's radius (km)
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
   const a =
@@ -24,7 +15,7 @@ export function calculateDistanceKm(lat1: number, lon1: number, lat2: number, lo
   return R * c;
 }
 
-// Classifies traffic based on speed vs typical free-flow conditions (FR23)
+//function to calculate traffic conditions
 function classifyTraffic(distanceKm: number, durationMinutes: number): TrafficStatus {
   if (distanceKm <= 0 || durationMinutes <= 0) return 'Light';
   const effectiveSpeedKmh = (distanceKm / durationMinutes) * 60;
@@ -37,7 +28,7 @@ function classifyTraffic(distanceKm: number, durationMinutes: number): TrafficSt
   return 'Light';
 }
 
-// In-memory cache to prevent duplicate Google Routes API hits
+//cache to prevent duplicate api calls
 interface CacheEntry<T> {
   data: T;
   expiresAt: number;
@@ -58,10 +49,7 @@ function getRoutingApiKey(): string {
   return rawKey.split('#')[0]!.trim();
 }
 
-/**
- * Calculates driving route from origin to destination/carpark.
- * Fulfills FR21-FR23, FR28, FR30, FR31, FR34.
- */
+//calculates driving route from starting position to carpark
 export async function getDrivingRoute(
   originLat: number,
   originLng: number,
@@ -140,7 +128,7 @@ export async function getDrivingRoute(
     console.warn('[RoutingService] Google Routes API failed, falling back to estimation model:', error);
   }
 
-  // Resilient fallback estimation if external API is throttled or offline (UC-09.EX.3)
+  //fallback if google maps API doesnt work
   const distKm = parseFloat(calculateDistanceKm(originLat, originLng, destLat, destLng).toFixed(1));
   const distMeters = Math.round(distKm * 1000);
   const durationMin = Math.max(2, Math.round((distKm / 35) * 60));
@@ -164,10 +152,7 @@ export async function getDrivingRoute(
   };
 }
 
-/**
- * Calculates pedestrian walking route from carpark to final destination venue.
- * Fulfills FR29, FR32.
- */
+//Calculates walking route from carpark to final destination venue
 export async function getWalkingRoute(
   originLat: number,
   originLng: number,
@@ -221,7 +206,7 @@ export async function getWalkingRoute(
     console.warn('[RoutingService] Google Routes walking API failed, using distance estimation:', error);
   }
 
-  // Walking speed approx 4.5 km/h (75 meters / minute)
+  //fallback calculation for walking distance and duration
   const distKm = calculateDistanceKm(originLat, originLng, destLat, destLng);
   const distMeters = Math.round(distKm * 1000);
   const durationMin = Math.max(1, Math.round(distMeters / 75));

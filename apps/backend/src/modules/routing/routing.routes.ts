@@ -3,11 +3,11 @@ import { getDrivingRoute, getWalkingRoute } from './routing.service.js';
 
 const router: Router = Router();
 
-/**
- * GET /api/routes/driving
- * Query params: originLat, originLng, destLat, destLng
- * Returns DrivingRoute JSON per docs/API_CONTRACT.md
- */
+
+//GET /api/routes/driving
+//query params: originLat, originLng, destLat, destLng
+//returns DrivingRoute JSON
+
 router.get('/driving', async (req: Request, res: Response) => {
   try {
     const { originLat, originLng, destLat, destLng } = req.query;
@@ -35,11 +35,9 @@ router.get('/driving', async (req: Request, res: Response) => {
   }
 });
 
-/**
- * GET /api/routes/walking
- * Query params: originLat, originLng, destLat, destLng
- * Returns WalkingRoute JSON per docs/API_CONTRACT.md
- */
+//GET /api/routes/walking
+//query params: originLat,originLng,destLat,destLng
+//returns WalkingRoute JSON
 router.get('/walking', async (req: Request, res: Response) => {
   try {
     const { originLat, originLng, destLat, destLng } = req.query;

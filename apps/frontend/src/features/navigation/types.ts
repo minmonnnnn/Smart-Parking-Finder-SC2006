@@ -9,10 +9,17 @@ export interface PlaceItem {
   placeId: string;
   main: string;
   sub: string;
+  name?: string;
   lat?: number;
   lng?: number;
   availableLots?: number;
 }
+
+export type NavDestination = PlaceItem & {
+  lat: number;
+  lng: number;
+  name: string;
+};
 
 export interface RouteInfo {
   summary: string;
@@ -28,7 +35,6 @@ export interface WalkingInfo {
   path: google.maps.LatLng[] | { lat: number; lng: number }[];
 }
 
-export type SearchTargetMode = 'origin' | 'carpark' | 'destination';
 
 export interface NavigationPageProps {
   onBack?: () => void;

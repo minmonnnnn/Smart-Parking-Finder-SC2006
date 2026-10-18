@@ -1,4 +1,3 @@
-/* Team SRS colour palette (Section 7 of Playbook) */
 :root {
   --color-primary: #FFC768;
   --color-secondary: #2563EB;
@@ -9,7 +8,7 @@
   --color-bg-card: #FFFFFF;
 }
 
-/* Outer phone shell resembling the mobile mockup */
+/*Outer phone container*/
 .phoneFrame {
   width: 380px;
   max-width: 100%;
@@ -28,7 +27,7 @@
   border: 1px solid #E5E7EB;
 }
 
-/* Top Actions Header Bar — positioned strictly ABOVE the map */
+/*Top Actions Header Bar*/
 .topHeaderBar {
   height: 48px;
   background: #FFFFFF;
@@ -63,7 +62,7 @@
   opacity: 0.7;
 }
 
-/* Dedicated Map Area Container — sits directly below the top header */
+/*Map Area Container */
 .mapArea {
   position: relative;
   flex: 1;
@@ -71,7 +70,7 @@
   overflow: hidden;
 }
 
-/* Floating Min's Search Bar Wrapper — positioned within mapArea */
+/*Search Bar Wrapper*/
 .floatingSearchBarWrapper {
   position: absolute;
   top: 12px;
@@ -80,7 +79,7 @@
   z-index: 22;
 }
 
-/* Side Navigation Drawer Overlay */
+/*Side nav overlay*/
 .sideNavOverlay {
   position: absolute;
   top: 48px;
@@ -158,87 +157,7 @@
   color: #111827;
 }
 
-/* Floating Search and Target Selection Container */
-.searchCardContainer {
-  position: absolute;
-  top: 80px;
-  left: 16px;
-  right: 16px;
-  z-index: 22;
-}
-
-.targetTabs {
-  display: flex;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(8px);
-  padding: 3px;
-  border-radius: 20px;
-  margin-bottom: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-  border: 1px solid rgba(0, 0, 0, 0.06);
-}
-
-.targetTab {
-  flex: 1;
-  padding: 6px 6px;
-  border-radius: 16px;
-  border: none;
-  background: transparent;
-  font-size: 10.5px;
-  font-weight: 700;
-  color: #6B7280;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  white-space: nowrap;
-  transition: all 0.15s ease;
-}
-
-.targetTabActive {
-  background: var(--color-secondary);
-  color: #FFFFFF;
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.35);
-}
-
-/* Floating Search Capsule on the map */
-.searchCapsule {
-  background: #FFFFFF;
-  border-radius: 28px;
-  padding: 10px 16px;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.14);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-}
-
-.searchIcon {
-  font-size: 16px;
-  color: #9CA3AF;
-}
-
-.searchInput {
-  border: none;
-  outline: none;
-  flex: 1;
-  font-size: 14px;
-  color: #111827;
-  background: transparent;
-}
-
-.searchInput::placeholder {
-  color: #9CA3AF;
-}
-
-.filterIcon {
-  font-size: 16px;
-  color: #6B7280;
-  cursor: pointer;
-}
-
-/* Full-bleed Google Maps canvas */
+/*google map*/
 .mapContainer {
   position: absolute;
   top: 0;
@@ -248,7 +167,7 @@
   z-index: 1;
 }
 
-/* Map Loading / Fallback Banner */
+/*map Loading*/
 .mapLoading {
   position: absolute;
   inset: 0;
@@ -263,7 +182,7 @@
   gap: 8px;
 }
 
-/* Floating Navigation Bottom Sheet (Xavier's Scope - SRS Navigation Mockup) */
+/*Navigation Bottom Sheet*/
 .bottomSheet {
   position: absolute;
   bottom: 12px;
@@ -319,32 +238,6 @@
   align-items: center;
   cursor: pointer;
   user-select: none;
-}
-
-.headerRightActions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.collapseToggleBtn {
-  background: #F1F5F9;
-  border: none;
-  font-size: 11px;
-  color: #64748B;
-  cursor: pointer;
-  padding: 5px 8px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.15s ease;
-  line-height: 1;
-}
-
-.collapseToggleBtn:hover {
-  background: #E2E8F0;
-  color: #0F172A;
 }
 
 .carparkTitle {
@@ -484,251 +377,7 @@
   transform: translateY(1px);
 }
 
-.sheetHeaderExpanded {
-  margin-bottom: 8px;
-}
-
-.sheetToggleChevron {
-  font-size: 11px;
-  color: #9CA3AF;
-  margin-left: 8px;
-  transition: transform 0.2s;
-}
-
-.totalEta {
-  font-size: 1.4rem;
-  font-weight: 800;
-  color: var(--color-secondary);
-}
-
-.trafficBadge {
-  padding: 3px 9px;
-  border-radius: 9999px;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.trafficLight {
-  background: #DEF7EC;
-  color: #03543F;
-}
-
-.trafficModerate {
-  background: #FEF08A;
-  color: #713F12;
-}
-
-.trafficHeavy {
-  background: #FDE8E8;
-  color: #9B1C1C;
-}
-
-.tripDetails {
-  font-size: 12px;
-  color: var(--color-text-muted);
-  line-height: 1.5;
-  margin-bottom: 10px;
-}
-
-/* Alternative routes selector (FR34) */
-.routeButtonGroup {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
-.routeBtn,
-.routeButton {
-  padding: 8px 10px;
-  border-radius: 12px;
-  border: 1.5px solid #E5E7EB;
-  background: #FFFFFF;
-  cursor: pointer;
-  text-align: left;
-  transition: all 0.15s ease;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.routeBtn:hover,
-.routeButton:hover {
-  border-color: #93C5FD;
-  background: #F8FAFC;
-}
-
-.routeBtnActive,
-.routeButtonActive {
-  border: 2px solid var(--color-secondary);
-  background: #EFF6FF;
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.12);
-}
-
-.routeSummaryRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  margin-bottom: 4px;
-}
-
-.routeBtnTitle,
-.routeSummaryTitle {
-  font-weight: 700;
-  font-size: 12px;
-  color: var(--color-text-main);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.routeBtnActive .routeBtnTitle,
-.routeBtnActive .routeSummaryTitle,
-.routeButtonActive .routeBtnTitle,
-.routeButtonActive .routeSummaryTitle {
-  color: var(--color-secondary);
-}
-
-.routeSummaryRow .trafficBadge {
-  padding: 1px 6px;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-  flex-shrink: 0;
-}
-
-.routeMetricsRow {
-  display: flex;
-  align-items: baseline;
-  gap: 4px;
-  font-size: 11.5px;
-  color: var(--color-text-muted);
-}
-
-.routeBtnDuration,
-.routeDurationText {
-  font-size: 11.5px;
-  font-weight: 700;
-  color: var(--color-text-main);
-}
-
-.routeBtnActive .routeDurationText,
-.routeButtonActive .routeDurationText {
-  color: var(--color-secondary);
-}
-
-.routeDistanceText {
-  font-size: 11px;
-  color: #6B7280;
-}
-
-.sheetActions,
-.actionRow {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.startNavBtn {
-  flex: 1;
-  background-color: var(--color-secondary);
-  color: #FFFFFF;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 10px;
-  font-weight: 600;
-  font-size: 12px;
-  cursor: pointer;
-  text-align: center;
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
-  transition: all 0.15s ease;
-  white-space: nowrap;
-}
-
-.startNavBtn:hover {
-  background-color: #1D4ED8;
-  transform: translateY(-1px);
-}
-
-.startNavBtn:active {
-  transform: translateY(0);
-}
-
-.cancelBtn {
-  flex: 1;
-  background-color: #FEE2E2;
-  color: #DC2626;
-  border: 1px solid #FCA5A5;
-  padding: 8px 12px;
-  border-radius: 10px;
-  font-weight: 600;
-  font-size: 12px;
-  cursor: pointer;
-  text-align: center;
-  transition: all 0.15s ease;
-  white-space: nowrap;
-}
-
-.cancelBtn:hover {
-  background-color: #FECACA;
-}
-
-.weatherSlot {
-  flex: 1.5;
-  background: #FEF3C7;
-  border: 1px solid #FDE68A;
-  color: #92400E;
-  padding: 7px 10px;
-  border-radius: 10px;
-  font-size: 11px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Bottom Navigation Bar (Home, Favourites, Profile) */
-.bottomNav {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 58px;
-  background: #FFFFFF;
-  border-top: 1px solid #E5E7EB;
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  z-index: 25;
-}
-
-.navItem {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  font-size: 11px;
-  color: #6B7280;
-  text-decoration: none;
-  cursor: pointer;
-}
-
-.navItemActive {
-  color: var(--color-secondary);
-  font-weight: 700;
-}
-
-.navIcon {
-  font-size: 18px;
-}
-
-/* Google Places Autocomplete dropdown styling */
+/*autocomplete dropdown*/
 :global(.pac-container) {
   border-radius: 14px !important;
   border: 1px solid #E5E7EB !important;
@@ -749,116 +398,14 @@
   font-weight: 600 !important;
 }
 
-/* Hide Google demo key error dialog popup and dark watermark overlay */
+/*hide Google demo key error dialog popup*/
 :global(.gm-err-container),
 :global(.gm-err-content),
 :global(.gm-style-moc) {
   display: none !important;
 }
 
-/* Custom Places (New) Autocomplete Dropdown */
-.suggestionsDropdown {
-  position: absolute;
-  top: 86px;
-  left: 0;
-  right: 0;
-  background: #FFFFFF;
-  border-radius: 16px;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  max-height: 260px;
-  overflow-y: auto;
-  z-index: 30;
-  padding: 6px 0;
-}
-
-.suggestionItem {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 16px;
-  cursor: pointer;
-  transition: background 0.15s;
-  border-bottom: 1px solid #F3F4F6;
-  text-align: left;
-}
-
-.suggestionItem:last-child {
-  border-bottom: none;
-}
-
-.suggestionItem:hover {
-  background: #F9FAFB;
-}
-
-.suggestionIcon {
-  font-size: 16px;
-  color: #6B7280;
-  flex-shrink: 0;
-}
-
-.suggestionText {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.suggestionMain {
-  font-size: 13px;
-  font-weight: 600;
-  color: #111827;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.suggestionSecondary {
-  font-size: 11px;
-  color: #6B7280;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* "Use Current Location" option at top of dropdown */
-.currentLocationOption {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 11px 16px;
-  cursor: pointer;
-  background: #EFF6FF;
-  border-bottom: 1px solid #DBEAFE;
-  text-align: left;
-  transition: background 0.15s;
-}
-
-.currentLocationOption:hover {
-  background: #DBEAFE;
-}
-
-.currentLocationIcon {
-  font-size: 18px;
-  color: var(--color-secondary);
-}
-
-.currentLocationText {
-  display: flex;
-  flex-direction: column;
-}
-
-.currentLocationMain {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--color-secondary);
-}
-
-.currentLocationSub {
-  font-size: 11px;
-  color: #3B82F6;
-}
-
-/* Floating "My Location" GPS FAB Button */
+/*my location button */
 .myLocationButton {
   position: absolute;
   right: 16px;
@@ -917,92 +464,13 @@
   }
 }
 
-/* Lot Availability Badge */
-.lotBadge {
-  font-size: 10px;
-  font-weight: 700;
-  padding: 3px 8px;
-  border-radius: 9999px;
-  background: #DEF7EC;
-  color: #03543F;
-  margin-left: auto;
-  white-space: nowrap;
-}
-
-/* Clickable Trip Rows in Bottom Sheet */
-.clickableTripRow {
-  cursor: pointer;
-  padding: 4px 6px;
-  border-radius: 8px;
-  transition: background 0.15s;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.clickableTripRow:hover {
-  background: #F3F4F6;
-}
-
-.changeTag {
-  font-size: 10px;
-  color: var(--color-secondary);
-  font-weight: 700;
-  text-decoration: underline;
-  margin-left: 6px;
-}
-
-/* Dropdown Section Header */
-.dropdownSectionHeader {
-  padding: 6px 16px 2px;
-  font-size: 11px;
-  font-weight: 700;
-  color: #9CA3AF;
-  text-transform: uppercase;
-}
-
-/* Dropdown Status Notice */
-.dropdownStatusNotice {
-  padding: 8px 16px;
-  font-size: 12px;
-  color: #6B7280;
-}
-
-/* Map Loading / Fallback Notice */
+/*Map Loading*/
 .mapLoadingNotice {
   font-size: 11px;
   color: #9CA3AF;
 }
 
-/* ETA Calculating State */
-.etaCalculatingText {
-  font-size: 1.1rem;
-  color: #6B7280;
-}
-
-/* ETA Minutes Unit */
-.etaUnit {
-  font-size: 13px;
-  font-weight: 500;
-  color: #6B7280;
-}
-
-/* Sheet Header Right Actions */
-.headerRightActions {
-  display: flex;
-  align-items: center;
-}
-
-/* Trip Row Spacing Adjustments */
-.tripRowOrigin {
-  margin-bottom: 3px;
-}
-
-.tripRowDest {
-  margin-top: 3px;
-}
-
-/* Recommended Carparks Panel Overlay */
+/*recommended Carparks Panel Overlay*/
 .recommendedCarparksPanel {
   position: absolute;
   bottom: 0;
@@ -1103,8 +571,3 @@
 .myLocationButtonCarparksList {
   bottom: 550px;
 }
-
-
-
-
-

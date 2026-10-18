@@ -6,13 +6,21 @@ import type {
 import { ApiException } from '../../lib/errors/index.js';
 import { calculateRecommendationScore } from './recommendation-score.js';
 
+/** Carpark data and caller-supplied values needed for scoring. */
 export interface RecommendationCandidate {
+  /** Carpark details, including whether it is sheltered. */
   carpark: Carpark;
+  /** Distance to the destination, in metres. */
   distanceMeters: number;
+  /** Traffic-aware driving ETA; candidates with null ETA are excluded. */
   drivingEtaMinutes: number | null;
+  /** Walking duration, in minutes. */
   walkingEtaMinutes: number;
+  /** Current lot counts used to calculate the real-time ratio. */
   availability: AvailabilityInfo;
+  /** Supplied historical ratio; null uses the scorer's real-time fallback. */
   historicalAvailabilityRatio: number | null;
+  /** Whether rain is expected, supplied by the caller. */
   rainExpected: boolean;
 }
 
@@ -50,6 +58,16 @@ const hasValidScoringData = (
   );
 };
 
+/**
+ * Scores candidates and sorts them from highest to lowest score. Invalid
+ * candidates, including those with null ETA, are skipped. Ties keep input
+ * order. Historical ratios and rain data must be supplied by the caller.
+ *
+ * @param candidates Carparks and the data needed to score them.
+ * @returns Scoreable candidates as RankedCarpark results.
+ * @throws {ApiException} With status 404 and code NO_CARPARKS_FOUND if the
+ *   input is empty or no candidate can be scored.
+ */
 export const rankCarparks = (
   candidates: readonly RecommendationCandidate[],
 ): RankedCarpark[] => {

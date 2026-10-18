@@ -4,6 +4,11 @@ import { env } from 'node:process';
 
 let client: SupabaseClient | undefined;
 
+/**
+ * Creates the historical-data Supabase client on first use and reuses it.
+ *
+ * @returns The client, or null if configuration is missing or creation fails.
+ */
 export const getHistoricalAvailabilityClient = (): SupabaseClient | null => {
   if (client) {
     return client;

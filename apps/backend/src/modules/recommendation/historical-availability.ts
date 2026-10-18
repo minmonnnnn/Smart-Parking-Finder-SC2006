@@ -43,6 +43,17 @@ const averageHistoricalRatios = (rows: readonly unknown[]): number | null => {
   return ratioTotal / validRows.length;
 };
 
+/**
+ * Averages valid records for the requested carpark, day, and hour bucket.
+ * Invalid rows are ignored, and at least four distinct `recorded_date` values
+ * are needed before the average is returned.
+ *
+ * @param carParkNo Carpark identifier.
+ * @param dayOfWeek Stored day index, with Sunday as 0.
+ * @param hour Start hour of the one-hour bucket (0–23).
+ * @returns Average `available_lots / total_lots`, or null if fewer than four
+ *   valid dates are found or the historical query is unavailable.
+ */
 export const getHistoricalAvailabilityRatio = async (
   carParkNo: string,
   dayOfWeek: number,

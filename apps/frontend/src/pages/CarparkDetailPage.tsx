@@ -8,6 +8,7 @@ import { AvailabilityAlertControl } from '../features/carparks/alerts/Availabili
 import { createFavourite, deleteFavourite, listFavourites } from '../features/favourites/favouritesApi'
 import type { CarparkDetails } from '@smart-parking/shared-types'
 import type { WeatherInfo } from '@smart-parking/shared-types'
+import { SunIcon, CloudRainIcon } from '../components/icons'
 
 const backIcon = (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -361,7 +362,7 @@ export function CarparkDetailPage({
           <div style={{ marginTop: vars.space[3], padding: `${vars.space[2]} ${vars.space[3]}`, background: vars.color.surface, borderRadius: vars.radius.md, border: `1px solid ${vars.color.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ fontSize: vars.fontSize.xs, color: vars.color.textMuted, textTransform: 'uppercase', letterSpacing: '0.4px' }}>Current Weather</div>
             <div style={{ fontSize: vars.fontSize.sm, color: vars.color.textPrimary, display: 'flex', alignItems: 'center', gap: vars.space[2] }}>
-              {weather.rainExpected ? '🌧' : '☀️'} {weather.condition}
+              {weather.rainExpected ? <CloudRainIcon size={16} /> : <SunIcon size={16} color="#F59E0B" />} {weather.condition}
             </div>
           </div>
         )}

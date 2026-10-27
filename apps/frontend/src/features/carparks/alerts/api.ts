@@ -54,3 +54,24 @@ export async function updateAvailabilityAlert(
     throw new Error("Unable to update availability alert");
   }
 }
+
+export async function testTriggerAvailabilityAlert(
+  carParkNo: string,
+  accessToken: string,
+  status: 'High' | 'Moderate' | 'Low' = 'Low',
+): Promise<{ success: boolean; newStatus: string; notificationsSent: number }> {
+  const response = await fetch("/api/alerts/test-trigger", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ carParkNo, status }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Unable to trigger test alert");
+  }
+
+  return response.json();
+}

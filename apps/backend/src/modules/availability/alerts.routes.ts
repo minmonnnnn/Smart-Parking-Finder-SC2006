@@ -1,6 +1,9 @@
 import { Router } from "express";
 import { createAlert, setAlertEnabled } from "./alerts.repository.js";
 import { getAvailabilityByCarParkNo } from "./repository.js";
+import { setCachedAvailability } from "./cache.js";
+import { checkAvailabilityAlerts, type AvailabilityNotification } from "./alerts.service.js";
+import type { AvailabilityStatus } from "./service.js";
 
 export type VerifyAlertToken = (
   token: string,
@@ -148,6 +151,52 @@ export function createAlertRouter(verifyToken: VerifyAlertToken): Router {
       alertId: String(alert.id),
       carParkNo: alert.carParkNo,
       enabled: alert.enabled,
+    });
+  });
+
+  router.post("/test-trigger", async (req, res) => {
+    const body: unknown = req.body;
+    const carParkNo =
+      isObject(body) && typeof body.carParkNo === "string"
+        ? body.carParkNo.trim()
+        : null;
+    const status =
+      isObject(body) && typeof body.status === "string"
+        ? (body.status as AvailabilityStatus)
+        : "Low";
+
+    if (!carParkNo) {
+      return res
+        .status(400)
+        .json({ error: { message: "carParkNo is required" } });
+    }
+
+    const availableLots =
+      status === "High" ? 80 : status === "Moderate" ? 20 : status === "Low" ? 2 : 0;
+    setCachedAvailability({
+      carParkNo,
+      availableLots,
+      totalLots: 100,
+      fetchedAt: new Date(),
+    });
+
+    const triggeredNotifications: AvailabilityNotification[] = [];
+    await checkAvailabilityAlerts(async (notification) => {
+      triggeredNotifications.push(notification);
+      const timestamp = new Date().toLocaleTimeString("en-SG", {
+        hour12: false,
+      });
+      console.log(
+        `[${timestamp}] 🔔 [AVAILABILITY ALERT TRIGGERED] Alert #${notification.alertId} for User "${notification.userId}": Carpark "${notification.carParkNo}" status changed from "${notification.previousStatus}" to "${notification.currentStatus}"!`
+      );
+    });
+
+    return res.json({
+      success: true,
+      carParkNo,
+      newStatus: status,
+      notificationsSent: triggeredNotifications.length,
+      notifications: triggeredNotifications,
     });
   });
 

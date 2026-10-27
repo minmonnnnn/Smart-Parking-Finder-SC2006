@@ -1,0 +1,167 @@
+/* Mobile Header Bar - Only visible on Mobile (<= 768px) */
+.mobileHeaderBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 48px;
+  background: #FFFFFF;
+  border-bottom: 1px solid #E5E7EB;
+  padding: 0 16px;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 30;
+  box-sizing: border-box;
+}
+
+.hamburgerButton {
+  background: none;
+  border: none;
+  padding: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #111827;
+  border-radius: 6px;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+}
+
+.hamburgerButton:hover {
+  background-color: #F3F4F6;
+}
+
+.hamburgerButton:active {
+  opacity: 0.7;
+}
+
+.headerTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+  letter-spacing: -0.01em;
+}
+
+.rightActionSlot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 32px;
+}
+
+/* Side Navigation Drawer Overlay */
+.sideNavOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 1000;
+  display: flex;
+}
+
+.sideNavDrawer {
+  width: 280px;
+  max-width: 80%;
+  height: 100%;
+  background: #FFFFFF;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 4px 0 16px rgba(0, 0, 0, 0.15);
+  animation: slideInDrawer 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideInDrawer {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.sideNavBanner {
+  height: 80px;
+  background: var(--color-primary, #FFC768);
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-end;
+  padding: 16px 20px;
+  box-sizing: border-box;
+}
+
+.bannerText {
+  font-size: 18px;
+  font-weight: 800;
+  color: #111827;
+  letter-spacing: -0.02em;
+}
+
+.sideNavMenu {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 0;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.sideNavItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  border: none;
+  background: transparent;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.15s ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.sideNavItem:hover {
+  background-color: #F3F4F6;
+}
+
+.sideNavItemLabel {
+  font-size: 15px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.sideNavHeartIcon,
+.sideNavIcon {
+  flex-shrink: 0;
+  color: #111827;
+}
+
+.sideNavDivider {
+  height: 1px;
+  background-color: #E5E7EB;
+  margin: 10px 16px;
+}
+
+.sideNavLogout {
+  color: #DC2626;
+  margin-top: 8px;
+}
+
+.sideNavLogout .sideNavIcon {
+  color: #DC2626;
+}
+
+.sideNavLogout:hover {
+  background-color: #FEF2F2;
+}
+
+/* Hide Mobile Header on Web / Desktop Mode (> 768px) */
+@media screen and (min-width: 769px) {
+  .mobileHeaderBar {
+    display: none !important;
+  }
+
+  .sideNavOverlay {
+    display: none !important;
+  }
+}
+

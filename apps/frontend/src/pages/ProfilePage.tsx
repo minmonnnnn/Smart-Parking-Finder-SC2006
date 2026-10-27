@@ -2,16 +2,19 @@ import { useEffect, useRef, useState } from 'react'
 import type { FormEvent, KeyboardEvent } from 'react'
 import type { VehicleType } from '@smart-parking/shared-types'
 import { useAuth } from '../features/auth/AuthContext'
+import { MobileHeader } from '../components/MobileHeader'
 import '../features/auth/auth.css'
 
 interface ProfilePageProps {
   onAccountDeleted(): void
+  onNavigate?(page: 'search' | 'favourites' | 'profile' | 'navigation'): void
+  onLogout?(): void
 }
 
 
 // Displays and allows modification of the authenticated user's profile, including account deletion
-export function ProfilePage({ onAccountDeleted }: ProfilePageProps) {
-  const { session, profile, loading, error, loadProfile, updateProfile, deleteAccount } = useAuth()
+export function ProfilePage({ onAccountDeleted, onNavigate, onLogout }: ProfilePageProps) {
+  const { session, profile, loading, error, loadProfile, updateProfile, deleteAccount, logout } = useAuth()
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState('')
   const [vehicleType, setVehicleType] = useState<VehicleType | ''>('')
@@ -121,7 +124,14 @@ export function ProfilePage({ onAccountDeleted }: ProfilePageProps) {
     }
   }
 
-  return <main className="auth-screen profile-screen">
+  return (
+    <>
+      <MobileHeader
+        title="Your profile"
+        onNavigate={onNavigate}
+        onLogout={onLogout || logout}
+      />
+      <main className="auth-screen profile-screen">
     <section className="auth-panel profile-panel" aria-labelledby="profile-title" inert={confirming}>
       <div className="auth-mark" aria-hidden="true"><span>P</span><i /><i /><i /></div>
       <p className="auth-eyebrow">SMART PARKING · YOUR ACCOUNT</p>
@@ -181,4 +191,6 @@ export function ProfilePage({ onAccountDeleted }: ProfilePageProps) {
       </div>
     </div>}
   </main>
+    </>
+  )
 }

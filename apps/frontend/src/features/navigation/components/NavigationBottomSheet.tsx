@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import styles from '../../../pages/NavigationPage.module.css';
+import { AlertTriangleIcon, CloudIcon } from '../../../components/icons';
 import type { RouteInfo, WalkingInfo } from '../types';
 import type { WeatherInfo } from '@smart-parking/shared-types';
 
@@ -19,7 +20,6 @@ export interface NavigationBottomSheetProps {
   weatherInfo?: WeatherInfo | null;
 }
 
-
 function extractAreaName(name?: string): string {
   if (!name) return 'Bishan';
   if (name.toLowerCase().includes('bishan')) return 'Bishan';
@@ -35,6 +35,7 @@ export function NavigationBottomSheet({
   carpark,
   drivingRoutes = [],
   activeRouteIndex = 0,
+  onSelectRoute,
   walkingInfo,
   isCalculating = false,
   isSheetCollapsed = false,
@@ -48,14 +49,13 @@ export function NavigationBottomSheet({
   const lotsRemaining = carpark?.availableLots ?? 42;
   const areaName = extractAreaName(carparkName);
 
-  //needed for handling sliding animation
+  // Sliding sheet gesture handling
   const [dragOffsetY, setDragOffsetY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartYRef = useRef<number | null>(null);
   const hasDraggedRef = useRef(false);
   const justDraggedRef = useRef(false);
 
-  //downward animation
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.button !== 0 && e.pointerType === 'mouse') return;
     dragStartYRef.current = e.clientY;
@@ -64,7 +64,7 @@ export function NavigationBottomSheet({
     try {
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     } catch {
-      //do nth
+      // Ignore if pointer capture fails
     }
   };
 
@@ -91,7 +91,6 @@ export function NavigationBottomSheet({
     }
   };
 
-  //upward animation
   const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     if (dragStartYRef.current === null) return;
     const diff = e.clientY - dragStartYRef.current;
@@ -101,7 +100,7 @@ export function NavigationBottomSheet({
     try {
       (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
     } catch {
-      //do nth
+      // Ignore
     }
 
     if (hasDraggedRef.current) {
@@ -132,7 +131,7 @@ export function NavigationBottomSheet({
     onToggleCollapse?.();
   };
 
-  //format walking distance
+  // Format walking distance
   const walkingDist = walkingInfo?.distanceMeters ?? 200;
   const isDirectCarpark = walkingDist <= 50;
   const formattedWalkDistance = isDirectCarpark
@@ -141,10 +140,19 @@ export function NavigationBottomSheet({
       ? `${(walkingDist / 1000).toFixed(1)} km`
       : `${walkingDist}m`;
 
+  const handleCancelClick = () => {
+    if (onCancelNav) {
+      onCancelNav();
+    } else if (typeof window !== 'undefined' && window.history.length > 1) {
+      window.history.back();
+    }
+  };
+
   return (
     <div
-      className={`${styles.bottomSheet} ${isSheetCollapsed ? styles.sheetCollapsed : ''
-        } ${isDragging ? styles.bottomSheetDragging : ''}`}
+      className={`${styles.bottomSheet} ${
+        isSheetCollapsed ? styles.sheetCollapsed : ''
+      } ${isDragging ? styles.bottomSheetDragging : ''}`}
       style={{
         transform: dragOffsetY !== 0 ? `translateY(${dragOffsetY}px)` : undefined,
       }}
@@ -213,6 +221,21 @@ export function NavigationBottomSheet({
               <div className={styles.metricLabel}>
                 Drive ({currentDriving?.distanceKm ? `${currentDriving.distanceKm} km` : '1.6 km'})
               </div>
+              {!isCalculating && currentDriving?.traffic && (
+                <div
+                  className={`${styles.trafficIndicator} ${
+                    currentDriving.traffic === 'Heavy'
+                      ? styles.trafficHeavy
+                      : currentDriving.traffic === 'Moderate'
+                      ? styles.trafficModerate
+                      : styles.trafficLight
+                  }`}
+                  data-testid="traffic-status-badge"
+                >
+                  <span className={styles.trafficDot} />
+                  {currentDriving.traffic} Traffic
+                </div>
+              )}
             </div>
 
             <div className={styles.metricCard}>
@@ -229,22 +252,37 @@ export function NavigationBottomSheet({
             </div>
           </div>
 
+          {/* Alternative Routes Selection (FR34) */}
+          {drivingRoutes.length > 1 && onSelectRoute && (
+            <div className={styles.routeSelector} data-testid="alternative-routes">
+              <div className={styles.routeSelectorHeader}>Available Routes</div>
+              <div className={styles.routeOptionList}>
+                {drivingRoutes.map((route, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    className={`${styles.routeOptionBtn} ${
+                      idx === activeRouteIndex ? styles.routeOptionBtnActive : ''
+                    }`}
+                    onClick={() => onSelectRoute(idx)}
+                    aria-label={`Select route ${idx + 1}: ${route.summary}`}
+                  >
+                    <span className={styles.routeOptionSummary}>
+                      {route.summary || (idx === 0 ? 'Primary Route' : `Alternative ${idx}`)}
+                    </span>
+                    <span className={styles.routeOptionMeta}>
+                      {route.durationMinutes} mins • {route.distanceKm} km • {route.traffic}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Weather Alert / Condition Information (FR24-FR27) */}
           {weatherInfo?.rainExpected ? (
             <div className={styles.weatherAlertCard}>
-              <svg
-                className={styles.weatherAlertIcon}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
-                <line x1="12" y1="9" x2="12" y2="13" />
-                <line x1="12" y1="17" x2="12.01" y2="17" />
-              </svg>
+              <AlertTriangleIcon className={styles.weatherAlertIcon} />
               <div className={styles.weatherAlertText}>
                 {weatherAlert ||
                   `Bring an umbrella — ${weatherInfo.condition.toLowerCase()} expected around ${areaName}.`}
@@ -252,45 +290,46 @@ export function NavigationBottomSheet({
             </div>
           ) : weatherInfo ? (
             <div className={styles.weatherInfoCard}>
-              <svg
-                className={styles.weatherInfoIcon}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" />
-              </svg>
+              <CloudIcon className={styles.weatherInfoIcon} />
               <div className={styles.weatherInfoText}>
                 {weatherInfo.condition} around {areaName} • No rain expected
               </div>
             </div>
+          ) : weatherInfo === null ? (
+            weatherAlert ? (
+              <div className={styles.weatherAlertCard}>
+                <svg
+                  className={styles.weatherAlertIcon}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+                  <line x1="12" y1="9" x2="12" y2="13" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+                <div className={styles.weatherAlertText}>{weatherAlert}</div>
+              </div>
+            ) : null
           ) : (
             <div className={styles.weatherAlertCard}>
-              <svg
-                className={styles.weatherAlertIcon}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
-                <line x1="12" y1="9" x2="12" y2="13" />
-                <line x1="12" y1="17" x2="12.01" y2="17" />
-              </svg>
+              <AlertTriangleIcon className={styles.weatherAlertIcon} />
               <div className={styles.weatherAlertText}>
                 {weatherAlert ||
                   `Bring an umbrella — rain shower expected at 9:35 around ${areaName}.`}
               </div>
             </div>
           )}
-          <button type="button" className={styles.cancelNavButton} onClick={onCancelNav || (() => window.history.back())}>
+
+          <button
+            type="button"
+            className={styles.cancelNavButton}
+            onClick={handleCancelClick}
+          >
             Cancel Navigation
           </button>
         </>

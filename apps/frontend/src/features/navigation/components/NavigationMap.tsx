@@ -2,7 +2,9 @@ import { useEffect, useRef } from 'react';
 import { useLoadScript } from '@react-google-maps/api';
 import { GOOGLE_MAPS_SCRIPT_ID, GOOGLE_MAPS_LIBRARIES, getGoogleMapsApiKey } from '../../../lib/googleMaps';
 import styles from '../../../pages/NavigationPage.module.css';
+import { theme } from '../../../components/theme';
 import { INITIAL_DRIVING_PATH, INITIAL_WALKING_PATH } from '../constants';
+import { CrosshairIcon, LoaderIcon } from '../../../components/icons';
 
 interface NavigationMapProps {
   origin: { lat: number; lng: number; name: string };
@@ -68,7 +70,7 @@ export function NavigationMap({
       drivingPolylineRef.current = new window.google.maps.Polyline({
         path: drivingPath || INITIAL_DRIVING_PATH,
         geodesic: true,
-        strokeColor: '#2563EB',
+        strokeColor: theme.color.secondary,
         strokeOpacity: 0.95,
         strokeWeight: 6,
         map: map,
@@ -78,7 +80,7 @@ export function NavigationMap({
       walkingPolylineRef.current = new window.google.maps.Polyline({
         path: walkingPath || INITIAL_WALKING_PATH,
         geodesic: true,
-        strokeColor: '#10B981',
+        strokeColor: theme.color.success,
         strokeOpacity: 0.9,
         strokeWeight: 4,
         map: map,
@@ -207,7 +209,7 @@ export function NavigationMap({
         onClick={onGetCurrentLocation}
         title="Get Current Location (GPS)"
       >
-        {isLocating ? '⏳' : '⌖'}
+        {isLocating ? <LoaderIcon size={20} className={styles.spinner} /> : <CrosshairIcon size={20} />}
       </button>
     </>
   );

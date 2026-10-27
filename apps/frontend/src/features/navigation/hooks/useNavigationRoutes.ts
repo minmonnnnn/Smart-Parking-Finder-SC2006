@@ -12,14 +12,14 @@ interface UseNavigationRoutesProps {
   destination: { lat: number; lng: number; name: string };
 }
 
-//get driving and walking routes from the api 
+// Get driving and walking routes from the api
 export function useNavigationRoutes({
   origin,
   carpark,
   destination,
 }: UseNavigationRoutesProps) {
   const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
-  //placeholder data 
+  // Placeholder data
   const [drivingRoutes, setDrivingRoutes] = useState<RouteInfo[]>([
     {
       summary: 'via Sin Ming Rd',
@@ -57,7 +57,7 @@ export function useNavigationRoutes({
     async function fetchLiveRoutes() {
       setIsCalculatingRoute(true);
 
-      //get driving distance
+      // Get driving distance
       let calculatedDriveRoutes: RouteInfo[] = [];
 
       try {
@@ -105,11 +105,11 @@ export function useNavigationRoutes({
             });
           }
         }
-      } catch (err) {
-        console.warn('Backend /api/routes/driving unreachable, falling back to direct route computation:', err);
+      } catch {
+        // Fall back to direct calculation if backend endpoint is unreachable
       }
 
-      //fall for if api calls fails
+      // Fallback if api calls fail
       if (calculatedDriveRoutes.length === 0) {
         const estDist = parseFloat(
           calculateDistanceKm(origin.lat, origin.lng, carpark.lat, carpark.lng).toFixed(1)
@@ -126,7 +126,7 @@ export function useNavigationRoutes({
         ];
       }
 
-      //get walking distance
+      // Get walking distance
       let calculatedWalk: WalkingInfo = {
         durationMinutes: 4,
         distanceMeters: 350,
@@ -154,8 +154,8 @@ export function useNavigationRoutes({
             path: walkCoords,
           };
         }
-      } catch (err) {
-        console.warn('Backend /api/routes/walking unreachable:', err);
+      } catch {
+        // Fall back to estimation
       }
 
       if (!isCancelled) {
@@ -171,7 +171,16 @@ export function useNavigationRoutes({
     return () => {
       isCancelled = true;
     };
-  }, [origin, carpark, destination, apiBaseUrl]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- primitives prevent re-render loops from object identity changes
+  }, [
+    origin.lat,
+    origin.lng,
+    carpark.lat,
+    carpark.lng,
+    destination.lat,
+    destination.lng,
+    apiBaseUrl,
+  ]);
 
   return {
     drivingRoutes,
@@ -182,4 +191,3 @@ export function useNavigationRoutes({
     isCalculatingRoute,
   };
 }
-

@@ -5,6 +5,7 @@ import { apiRequest } from '../../lib/apiClient'
 export function listFavourites(token: string): Promise<FavouriteLocation[]> {
   return apiRequest('/api/favourites', { token })
 }
+
 // Saves a destination as a new favourite location
 export function createFavourite(token: string, input: CreateFavouriteRequest): Promise<FavouriteLocation> {
   return apiRequest('/api/favourites', { method: 'POST', token, body: JSON.stringify(input) })

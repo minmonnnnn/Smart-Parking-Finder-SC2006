@@ -1,5 +1,6 @@
 import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from 'react';
 import { vars } from '../../components';
+import { CrosshairIcon, MapPinIcon } from '../../components/icons';
 import type { PlaceItem } from '../navigation/types';
 
 export type YesNo = 'yes' | 'no';
@@ -420,7 +421,7 @@ export function SearchBar({
                 borderBottom: `1px solid ${vars.color.border}`,
               }}
             >
-              <span style={{ fontSize: '16px', color: vars.color.secondary }}>🎯</span>
+              <CrosshairIcon size={18} color={vars.color.secondary} style={{ flexShrink: 0 }} />
               <div>
                 <div style={{ fontSize: '13px', fontWeight: 700, color: vars.color.secondary }}>
                   Use My Current Location
@@ -460,7 +461,7 @@ export function SearchBar({
                 borderBottom: '1px solid #F3F4F6',
               }}
             >
-              <span style={{ fontSize: '15px', color: vars.color.textSecondary }}>📍</span>
+              <MapPinIcon size={18} color={vars.color.textSecondary} style={{ flexShrink: 0 }} />
               <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                 <span
                   style={{

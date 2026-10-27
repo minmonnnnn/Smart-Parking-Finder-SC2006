@@ -1,5 +1,5 @@
 import { apiRequest } from '../../lib/apiClient'
-import type { DestinationSuggestion, Destination } from '@smart-parking/shared-types'
+import type { DestinationSuggestion, Destination, CarparkSort } from '@smart-parking/shared-types'
 import type { NearbyCarparksResponse, CarparkFilters } from '@smart-parking/shared-types'
 
 /**
@@ -27,6 +27,7 @@ export interface NearbyParams {
   destinationLng: number
   originLat?: number
   originLng?: number
+  sort?: CarparkSort
   filters?: CarparkFilters
 }
 
@@ -43,6 +44,7 @@ export async function getNearbyCarparks(params: NearbyParams): Promise<NearbyCar
   })
   if (params.originLat !== undefined) q.set('originLat', String(params.originLat))
   if (params.originLng !== undefined) q.set('originLng', String(params.originLng))
+  if (params.sort !== undefined) q.set('sort', params.sort)
   if (params.filters?.evChargingOnly) q.set('evChargingOnly', 'true')
   if (params.filters?.shelteredOnly) q.set('shelteredOnly', 'true')
   return apiRequest<NearbyCarparksResponse>(`/api/carparks/nearby?${q.toString()}`)

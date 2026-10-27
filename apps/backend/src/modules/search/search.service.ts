@@ -114,6 +114,7 @@ export async function getNearbyCarparks(
       }
 
       if (!passesFilters(carpark, availability, filters)) return null;
+      if (sort === 'recommended' && availability.availableLots <= 0) return null;
 
       const walkingDistanceKm = calculateDistanceKm(
         carpark.latitude, carpark.longitude,

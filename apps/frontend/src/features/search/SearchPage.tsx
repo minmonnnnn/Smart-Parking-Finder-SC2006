@@ -453,6 +453,7 @@ export default function SearchPage({
       const nearby = await getNearbyCarparks({
         destinationLat: dest.latitude,
         destinationLng: dest.longitude,
+        sort: "recommended",
         filters: {
           ...(evFilter === "yes" ? { evChargingOnly: true } : {}),
           ...(shelteredFilter === "yes" ? { shelteredOnly: true } : {}),
@@ -481,6 +482,7 @@ export default function SearchPage({
       const nearby = await getNearbyCarparks({
         destinationLat: lat,
         destinationLng: lng,
+        sort: "recommended",
         filters: {
           ...(evFilter === "yes" ? { evChargingOnly: true } : {}),
           ...(shelteredFilter === "yes" ? { shelteredOnly: true } : {}),
@@ -543,11 +545,12 @@ export default function SearchPage({
       const level = availabilityLevel(r.availability.availableLots, r.availability.totalLots);
       return availabilityFilter.has(level);
     })
+    .filter((r) => r.availability.availableLots > 0)
     .slice()
     .sort((a, b) =>
       pricingAsc
-        ? (a.carpark.parkingCost ?? Infinity) - (b.carpark.parkingCost ?? Infinity)
-        : a.distanceMeters - b.distanceMeters,
+        ? ((a.carpark.parkingCost ?? 0.6) - (b.carpark.parkingCost ?? 0.6) || a.distanceMeters - b.distanceMeters)
+        : (b.recommendationScore ?? 0) - (a.recommendationScore ?? 0) || a.distanceMeters - b.distanceMeters,
     );
 
   const filterProps = {

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { calculateDistanceKm, getDrivingRoute, getWalkingRoute } from './routing.service.js';
 import { hasNearbyIncidents, type LtaTrafficIncident } from './lta-traffic.service.js';
 

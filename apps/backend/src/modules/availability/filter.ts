@@ -1,4 +1,9 @@
-import type { AvailabilityStatus } from "./service.js";
+import type {
+  AvailabilityStatus,
+  CarparkFilters,
+} from "@smart-parking/shared-types";
+
+export type { CarparkFilters } from "@smart-parking/shared-types";
 
 export interface CarparkFilterInput {
   carParkNo: string;
@@ -6,13 +11,6 @@ export interface CarparkFilterInput {
   parkingCost: number | null;
   availabilityStatus: AvailabilityStatus;
   isSheltered: boolean;
-}
-
-export interface CarparkFilters {
-  evChargingOnly?: boolean;
-  maxCost?: number;
-  minAvailability?: "High" | "Moderate" | "Low";
-  shelteredOnly?: boolean;
 }
 
 const availabilityRank: Record<AvailabilityStatus, number> = {

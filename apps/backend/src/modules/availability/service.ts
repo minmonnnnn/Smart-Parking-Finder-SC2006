@@ -1,12 +1,12 @@
-export type AvailabilityStatus = "High" | "Moderate" | "Low" | "Unavailable";
+import type {
+  AvailabilityInfo,
+  AvailabilityStatus,
+} from "@smart-parking/shared-types";
 
-export interface AvailabilityInfo {
-  availableLots: number;
-  totalLots: number;
-  status: AvailabilityStatus;
-  lastUpdated: string;
-  isStale: boolean;
-}
+export type {
+  AvailabilityInfo,
+  AvailabilityStatus,
+} from "@smart-parking/shared-types";
 
 /**
  * High: at least 30% of lots available.

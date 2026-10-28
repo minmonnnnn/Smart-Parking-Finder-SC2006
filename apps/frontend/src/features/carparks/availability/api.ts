@@ -1,10 +1,5 @@
-export interface AvailabilityInfo {
-  availableLots: number;
-  totalLots: number;
-  status: "High" | "Moderate" | "Low" | "Unavailable";
-  lastUpdated: string;
-  isStale: boolean;
-}
+import type { AvailabilityInfo } from "@smart-parking/shared-types";
+export type { AvailabilityInfo } from "@smart-parking/shared-types";
 
 export async function fetchAvailability(
   carParkNo: string,

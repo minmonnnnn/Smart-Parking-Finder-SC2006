@@ -16,20 +16,24 @@ import { createSearchRouter } from "./modules/search/search.routes.js";
 import weatherRouter from "./modules/weather/weather.routes.js";
 import { createAvailabilityRepository } from "./modules/availability/repository.js";
 import { createAvailabilityRouter } from "./modules/availability/routes.js";
+import { createAlertRepository } from "./modules/availability/alerts.repository.js";
 import { createAlertRouter } from "./modules/availability/alerts.routes.js";
-import { startAvailabilityPoller } from "./modules/availability/poller.js";
 import {
   checkAvailabilityAlerts,
   type AvailabilityNotification,
 } from "./modules/availability/alerts.service.js";
+import { startAvailabilityPoller } from "./modules/availability/poller.js";
+import { loadHdbLtaCapacities } from "./modules/availability/lta-capacities.js";
 
 const env = loadEnv(process.env);
 const clients = createSupabaseClients(env);
 const authGateway = createSupabaseAuthGateway(clients);
 const favouritesGateway = createSupabaseFavouritesGateway(clients.adminClient);
+
 const availabilityRepository = createAvailabilityRepository(
   clients.adminClient,
 );
+const alertRepository = createAlertRepository(clients.adminClient);
 
 async function logAvailabilityNotification(
   notification: AvailabilityNotification,
@@ -58,12 +62,26 @@ const server = createApp({
   search: createSearchRouter(clients.adminClient),
   weather: weatherRouter,
   availability: createAvailabilityRouter(availabilityRepository),
-  alerts: createAlertRouter(authGateway.verifyToken),
+  alerts: createAlertRouter({
+    verifyToken: authGateway.verifyToken,
+    alerts: alertRepository,
+    availability: availabilityRepository,
+  }),
 }).listen(env.port, () => {
   console.log(`Backend listening on http://localhost:${env.port}`);
 });
 
+const ltaAccountKey = process.env.LTA_DATAMALL_API_KEY?.trim();
+
 const stopAvailabilityPoller = startAvailabilityPoller(availabilityRepository, {
+  ...(ltaAccountKey
+    ? {
+        lta: {
+          accountKey: ltaAccountKey,
+          loadHdbCapacities: () => loadHdbLtaCapacities(clients.adminClient),
+        },
+      }
+    : {}),
   checkAlerts: () =>
     checkAvailabilityAlerts(logAvailabilityNotification, {
       alerts: alertRepository,

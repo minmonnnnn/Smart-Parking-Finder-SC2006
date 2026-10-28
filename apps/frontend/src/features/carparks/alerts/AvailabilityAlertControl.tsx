@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { vars } from "../../../components";
 import { AvailabilityAlertToggle } from "./AvailabilityAlertToggle";
-import { createAvailabilityAlert, updateAvailabilityAlert } from "./api";
+import {
+  createAvailabilityAlert,
+  updateAvailabilityAlert,
+  testTriggerAvailabilityAlert,
+} from "./api";
 
 interface AvailabilityAlertControlProps {
   carParkNo: string;
@@ -54,6 +58,8 @@ function SubscriptionControl({
   const [enabled, setEnabled] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [testingAlert, setTestingAlert] = useState(false);
+  const [testFeedback, setTestFeedback] = useState<string | null>(null);
 
   const inFlight = useRef(false);
   const active = useRef(false);
@@ -72,6 +78,7 @@ function SubscriptionControl({
     inFlight.current = true;
     setPending(true);
     setError(null);
+    setTestFeedback(null);
 
     try {
       if (alertId) {
@@ -103,6 +110,25 @@ function SubscriptionControl({
 
       if (active.current) {
         setPending(false);
+      }
+    }
+  }
+
+  async function handleTestTrigger() {
+    setTestingAlert(true);
+    setTestFeedback(null);
+    try {
+      const res = await testTriggerAvailabilityAlert(carParkNo, accessToken, "Low");
+      if (active.current) {
+        setTestFeedback(`Alert triggered! Status changed to ${res.newStatus}. Check backend terminal.`);
+      }
+    } catch {
+      if (active.current) {
+        setTestFeedback("Could not trigger test alert.");
+      }
+    } finally {
+      if (active.current) {
+        setTestingAlert(false);
       }
     }
   }
@@ -145,6 +171,38 @@ function SubscriptionControl({
           }}
         />
       </fieldset>
+
+      {enabled && (
+        <div style={{ marginTop: vars.space[2] }}>
+          <button
+            type="button"
+            disabled={testingAlert}
+            onClick={() => void handleTestTrigger()}
+            style={{
+              padding: `${vars.space[1]} ${vars.space[2]}`,
+              fontSize: vars.fontSize.xs,
+              background: 'transparent',
+              color: 'var(--color-primary, #b38600)',
+              border: '1px solid var(--color-primary, #b38600)',
+              borderRadius: vars.radius.sm,
+              cursor: 'pointer',
+            }}
+          >
+            {testingAlert ? "Simulating alert..." : "Simulate status change (test)"}
+          </button>
+          {testFeedback && (
+            <p
+              style={{
+                margin: `${vars.space[1]} 0 0`,
+                fontSize: vars.fontSize.xs,
+                color: vars.color.textSecondary,
+              }}
+            >
+              {testFeedback}
+            </p>
+          )}
+        </div>
+      )}
 
       {pending && (
         <p

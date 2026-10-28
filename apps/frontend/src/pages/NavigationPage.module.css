@@ -1,33 +1,23 @@
-:root {
-  --color-primary: #FFC768;
-  --color-secondary: #2563EB;
-  --color-success: #10B981;
-  --color-danger: #EF4444;
-  --color-text-main: #111827;
-  --color-text-muted: #4B5563;
-  --color-bg-card: #FFFFFF;
-}
+/* ==========================================================================
+   NAVIGATION PAGE — CORE / BASE STYLES
+   ========================================================================== */
 
-/*Outer phone container*/
+/* Outer app container / frame */
 .phoneFrame {
-  width: 380px;
+  width: 100%;
   max-width: 100%;
   height: calc(100vh - 74px);
-  max-height: 700px;
-  margin: 6px auto;
+  margin: 0 auto;
   overflow: hidden;
   position: relative;
   background: #FFFFFF;
   display: flex;
   flex-direction: column;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   box-sizing: border-box;
-  border-radius: 16px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
-  border: 1px solid #E5E7EB;
 }
 
-/*Top Actions Header Bar*/
+/* Top Actions Header Bar */
 .topHeaderBar {
   height: 48px;
   background: #FFFFFF;
@@ -62,7 +52,7 @@
   opacity: 0.7;
 }
 
-/*Map Area Container */
+/* Map Area Container */
 .mapArea {
   position: relative;
   flex: 1;
@@ -70,7 +60,7 @@
   overflow: hidden;
 }
 
-/*Search Bar Wrapper*/
+/* Floating Search Bar Wrapper */
 .floatingSearchBarWrapper {
   position: absolute;
   top: 12px;
@@ -79,7 +69,7 @@
   z-index: 22;
 }
 
-/*Side nav overlay*/
+/* Side Navigation Overlay & Drawer */
 .sideNavOverlay {
   position: absolute;
   top: 48px;
@@ -92,8 +82,8 @@
 }
 
 .sideNavDrawer {
-  width: 275px;
-  max-width: 78%;
+  width: 280px;
+  max-width: 80%;
   height: 100%;
   background: #FFFFFF;
   display: flex;
@@ -112,31 +102,29 @@
 }
 
 .sideNavBanner {
-  height: 120px;
+  height: 80px;
   background: var(--color-primary, #FFC768);
   flex-shrink: 0;
 }
 
 .sideNavMenu {
-  flex: 1;
-  background: #FFFFFF;
-  padding: 16px 0;
   display: flex;
   flex-direction: column;
+  padding: 12px 0;
+  flex: 1;
+  overflow-y: auto;
 }
 
 .sideNavItem {
   display: flex;
   align-items: center;
-  gap: 16px;
-  width: 100%;
-  padding: 14px 24px;
-  background: transparent;
+  gap: 12px;
+  padding: 12px 20px;
   border: none;
-  font-family: inherit;
-  font-size: 15px;
-  font-weight: 700;
+  background: transparent;
   color: #111827;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
   text-align: left;
   transition: background-color 0.15s ease;
@@ -157,7 +145,35 @@
   color: #111827;
 }
 
-/*google map*/
+.sideNavIcon {
+  flex-shrink: 0;
+  color: #111827;
+}
+
+.sideNavDivider {
+  height: 1px;
+  background-color: #E5E7EB;
+  margin: 10px 16px;
+}
+
+.sideNavLogout {
+  color: #DC2626;
+  margin-top: 8px;
+}
+
+.sideNavLogout .sideNavIcon {
+  color: #DC2626;
+}
+
+.sideNavLogout:hover {
+  background-color: #FEF2F2;
+}
+
+.hamburgerButton {
+  display: flex;
+}
+
+/* Google Map Container */
 .mapContainer {
   position: absolute;
   top: 0;
@@ -167,7 +183,7 @@
   z-index: 1;
 }
 
-/*map Loading*/
+/* Map Loading */
 .mapLoading {
   position: absolute;
   inset: 0;
@@ -182,7 +198,7 @@
   gap: 8px;
 }
 
-/*Navigation Bottom Sheet*/
+/* Navigation Bottom Sheet */
 .bottomSheet {
   position: absolute;
   bottom: 12px;
@@ -241,7 +257,7 @@
 }
 
 .carparkTitle {
-  font-size: 19px;
+  font-size: 18px;
   font-weight: 800;
   color: #0F172A;
   letter-spacing: -0.3px;
@@ -270,6 +286,7 @@
   margin: 8px 0;
 }
 
+/* Metrics Grid */
 .metricsGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -301,6 +318,37 @@
   white-space: nowrap;
 }
 
+/* Traffic Indicator Badge */
+.trafficIndicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-top: 4px;
+  width: fit-content;
+}
+
+.trafficDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.trafficLight {
+  color: #16A34A;
+}
+
+.trafficModerate {
+  color: #D97706;
+}
+
+.trafficHeavy {
+  color: #DC2626;
+}
+
+/* Weather Banners */
 .weatherAlertCard {
   background: #FEF2F2;
   border: 1px solid #FECACA;
@@ -353,6 +401,7 @@
   text-align: left;
 }
 
+/* Action Buttons */
 .cancelNavButton {
   width: 100%;
   background: #B91C1C;
@@ -377,35 +426,60 @@
   transform: translateY(1px);
 }
 
-/*autocomplete dropdown*/
-:global(.pac-container) {
-  border-radius: 14px !important;
-  border: 1px solid #E5E7EB !important;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
-  font-family: inherit !important;
-  margin-top: 6px !important;
-  z-index: 9999 !important;
+/* Alternative Route Selection */
+.routeSelector {
+  margin: 10px 0 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-:global(.pac-item) {
-  padding: 8px 12px !important;
-  font-size: 13px !important;
-  cursor: pointer !important;
+.routeSelectorHeader {
+  font-size: 12px;
+  font-weight: 600;
+  color: #4B5563;
 }
 
-:global(.pac-item-query) {
-  font-size: 13px !important;
-  font-weight: 600 !important;
+.routeOptionList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-/*hide Google demo key error dialog popup*/
-:global(.gm-err-container),
-:global(.gm-err-content),
-:global(.gm-style-moc) {
-  display: none !important;
+.routeOptionBtn {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1.5px solid #E5E7EB;
+  background: #F9FAFB;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease-in-out;
 }
 
-/*my location button */
+.routeOptionBtn:hover {
+  background: #F3F4F6;
+}
+
+.routeOptionBtnActive {
+  background: #EFF6FF;
+  border-color: #2563EB;
+}
+
+.routeOptionSummary {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.routeOptionMeta {
+  font-size: 12px;
+  color: #6B7280;
+}
+
+/* Floating "My Location" Button */
 .myLocationButton {
   position: absolute;
   right: 16px;
@@ -421,7 +495,7 @@
   align-items: center;
   justify-content: center;
   font-size: 20px;
-  color: var(--color-secondary);
+  color: var(--color-secondary, #2563EB);
   z-index: 22;
   transition: bottom 0.28s cubic-bezier(0.4, 0, 0.2, 1), transform 0.15s, background-color 0.15s, box-shadow 0.15s;
 }
@@ -432,6 +506,10 @@
 
 .myLocationButtonSheetHidden {
   bottom: 24px;
+}
+
+.myLocationButtonCarparksList {
+  bottom: 550px;
 }
 
 .myLocationButton:hover {
@@ -464,13 +542,7 @@
   }
 }
 
-/*Map Loading*/
-.mapLoadingNotice {
-  font-size: 11px;
-  color: #9CA3AF;
-}
-
-/*recommended Carparks Panel Overlay*/
+/* Recommended Carparks Panel Overlay */
 .recommendedCarparksPanel {
   position: absolute;
   bottom: 0;
@@ -568,6 +640,259 @@
   font-weight: 600;
 }
 
-.myLocationButtonCarparksList {
-  bottom: 550px;
+/* External Google Maps / Places Overrides */
+:global(.pac-container) {
+  border-radius: 14px !important;
+  border: 1px solid #E5E7EB !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
+  font-family: inherit !important;
+  margin-top: 6px !important;
+  z-index: 9999 !important;
+}
+
+:global(.pac-item) {
+  padding: 8px 12px !important;
+  font-size: 13px !important;
+  cursor: pointer !important;
+}
+
+:global(.pac-item-query) {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+}
+
+:global(.gm-err-container),
+:global(.gm-err-content),
+:global(.gm-style-moc) {
+  display: none !important;
+}
+
+
+/* ==========================================================================
+   MOBILE MODE (Screen width <= 768px)
+   Edge-to-edge touch layout, full screen height, thumb-friendly targets
+   ========================================================================== */
+@media screen and (max-width: 768px) {
+  .phoneFrame {
+    width: 100%;
+    max-width: 100%;
+    height: 100svh;
+    max-height: 100svh;
+    margin: 0;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+  }
+
+  .topHeaderBar {
+    height: 46px;
+    padding: 0 12px;
+  }
+
+  .floatingSearchBarWrapper {
+    top: 8px;
+    left: 8px;
+    right: 8px;
+  }
+
+  /* Bottom sheet spans full phone width with slim margins */
+  .bottomSheet {
+    left: 8px;
+    right: 8px;
+    bottom: 8px;
+    border-radius: 18px;
+    padding: 10px 12px 14px;
+  }
+
+  .sheetCollapsed {
+    padding: 8px 14px 10px;
+  }
+
+  .carparkTitle {
+    font-size: 17px;
+  }
+
+  .lotsBadge {
+    font-size: 11px;
+    padding: 4px 8px;
+  }
+
+  .metricsGrid {
+    gap: 6px;
+  }
+
+  .metricCard {
+    padding: 8px 10px;
+  }
+
+  .metricValue {
+    font-size: 15px;
+  }
+
+  .metricLabel {
+    font-size: 11px;
+  }
+
+  .cancelNavButton {
+    padding: 11px 14px;
+    font-size: 14.5px;
+    min-height: 44px; /* Accessible touch target */
+  }
+
+  .myLocationButton {
+    right: 12px;
+    bottom: 120px;
+    width: 44px;
+    height: 44px;
+  }
+
+  .myLocationButtonCollapsed {
+    bottom: 80px;
+  }
+
+  .recommendedCarparksPanel {
+    max-height: 75svh;
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    padding: 10px 12px 16px;
+  }
+
+  .recommendedCarparksScrollArea {
+    max-height: calc(75svh - 60px);
+  }
+}
+
+
+/* ==========================================================================
+   WEB / DESKTOP MODE (Screen width > 768px)
+   Spacious desktop card layout, centered bottom sheet, desktop hover states
+   ========================================================================== */
+@media screen and (min-width: 769px) {
+  /* Hide mobile top header bar, hamburger button, and side drawer in web mode (top desktop bar handles navigation) */
+  .topHeaderBar {
+    display: none !important;
+  }
+
+  .hamburgerButton {
+    display: none !important;
+  }
+
+  .sideNavOverlay {
+    display: none !important;
+  }
+
+  .phoneFrame {
+    width: 100%;
+    max-width: 720px;
+    height: min(840px, calc(100vh - 80px));
+    margin: 16px auto;
+    border-radius: 18px;
+    border: 1px solid #E2E8F0;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.04);
+  }
+
+  .floatingSearchBarWrapper {
+    top: 16px;
+    left: 20px;
+    right: 20px;
+  }
+
+  /* Centered, floating bottom card on desktop */
+  .bottomSheet {
+    left: 20px;
+    right: 20px;
+    max-width: 580px;
+    margin: 0 auto;
+    bottom: 16px;
+    border-radius: 16px;
+    padding: 14px 18px 18px;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14), 0 2px 6px rgba(15, 23, 42, 0.06);
+  }
+
+  .sheetCollapsed {
+    padding: 12px 20px 14px;
+  }
+
+  .carparkTitle {
+    font-size: 20px;
+  }
+
+  .lotsBadge {
+    font-size: 12px;
+    padding: 5px 12px;
+  }
+
+  .metricsGrid {
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .metricCard {
+    padding: 10px 14px;
+    border: 1px solid #F1F5F9;
+  }
+
+  .metricValue {
+    font-size: 18px;
+  }
+
+  .metricLabel {
+    font-size: 12.5px;
+  }
+
+  .routeOptionBtn {
+    padding: 10px 14px;
+  }
+
+  .routeOptionBtn:hover {
+    background: #F1F5F9;
+    border-color: #CBD5E1;
+  }
+
+  .cancelNavButton {
+    padding: 12px 18px;
+    font-size: 15px;
+  }
+
+  .myLocationButton {
+    right: 24px;
+    bottom: 140px;
+    width: 48px;
+    height: 48px;
+    font-size: 22px;
+  }
+
+  .myLocationButtonCollapsed {
+    bottom: 90px;
+  }
+
+  .recommendedCarparksPanel {
+    max-width: 620px;
+    margin: 0 auto;
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+    border-radius: 20px;
+    max-height: 580px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
+  }
+
+  .sideNavDrawer {
+    width: 320px;
+    box-shadow: 6px 0 24px rgba(0, 0, 0, 0.18);
+  }
+}
+
+/* Spinning loader animation */
+.spinner {
+  animation: spinLoader 1s linear infinite;
+}
+
+@keyframes spinLoader {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }

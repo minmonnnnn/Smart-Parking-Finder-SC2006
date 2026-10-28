@@ -84,7 +84,13 @@ function AppShell() {
         )
 
       case 'profile':
-        return <ProfilePage onAccountDeleted={() => navigate('sign-in')} />
+        return (
+          <ProfilePage
+            onAccountDeleted={() => navigate('sign-in')}
+            onNavigate={navigate}
+            onLogout={logout}
+          />
+        )
 
       case 'favourites':
         return (
@@ -119,6 +125,8 @@ function AppShell() {
               openCarparkDetail(favourite.address || favourite.locationName, initial)
             }}
             onSearch={() => navigate('search')}
+            onNavigate={navigate}
+            onLogout={logout}
           />
         )
 
@@ -129,6 +137,7 @@ function AppShell() {
             initialCarparkNo={selectedCarParkNo}
             initialCarparkDetails={selectedCarparkDetails}
             onNavigate={navigate}
+            onLogout={logout}
           />
         )
     }

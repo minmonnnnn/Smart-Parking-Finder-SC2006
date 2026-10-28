@@ -29,8 +29,8 @@ function setFetch(favourites: typeof home[] | Promise<Response> = [home, office]
 
 function renderPage(onSelect = vi.fn(), onSearch = vi.fn()) {
   localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ userId: 'driver-1', token: 'session-token' }))
-  render(<AuthProvider><FavouritesPage onSelect={onSelect} onSearch={onSearch} /></AuthProvider>)
-  return { onSelect, onSearch }
+  const rendered = render(<AuthProvider><FavouritesPage onSelect={onSelect} onSearch={onSearch} /></AuthProvider>)
+  return { ...rendered, onSelect, onSearch }
 }
 
 function SwitchSession() {
@@ -210,6 +210,21 @@ describe('FavouritesPage', () => {
     await act(async () => { await firstList.promise; await Promise.resolve() })
     expect(screen.getByText('2 Main St')).toBeInTheDocument()
     expect(screen.queryByText('1 Main St')).not.toBeInTheDocument()
+  })
+
+  it('flushes and executes a pending deletion when navigating away without switching session', async () => {
+    const fetchMock = setFetch([home])
+    const { unmount } = renderPage()
+    await screen.findByText('1 Main St')
+    vi.useFakeTimers()
+    fireEvent.click(screen.getByRole('button', { name: 'Delete Home' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm deletion' }))
+    expect(screen.getByRole('button', { name: 'Undo' })).toBeInTheDocument()
+
+    // Navigating away to Search or Profile unmounts FavouritesPage while session token remains the same
+    unmount()
+    expect(fetchMock.mock.calls.filter(([, options]) => options?.method === 'DELETE')).toHaveLength(1)
+    expect(fetchMock.mock.calls.find(([, options]) => options?.method === 'DELETE')?.[0]).toBe('/api/favourites/7')
   })
 
   it('cancels a pending Undo deletion when the token changes', async () => {

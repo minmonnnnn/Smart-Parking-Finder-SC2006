@@ -17,3 +17,9 @@ export function getCachedAvailability(
 ): RawAvailabilityRecord | null {
   return availabilityCache.get(carParkNo) ?? null;
 }
+
+export function setCachedAvailability(
+  record: RawAvailabilityRecord,
+): void {
+  availabilityCache.set(record.carParkNo, record);
+}

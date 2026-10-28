@@ -223,4 +223,54 @@ describe('NavigationBottomSheet', () => {
       )
     ).toBeTruthy();
   });
+
+  it('does not render fake rain alert when weatherInfo is explicitly null', () => {
+    render(
+      <NavigationBottomSheet
+        {...defaultProps}
+        weatherInfo={null}
+      />
+    );
+
+    expect(
+      screen.queryByText(/rain shower expected at 9:35/i)
+    ).toBeNull();
+  });
+
+  it('renders alternative routes and triggers onSelectRoute when selected', () => {
+    const handleSelectRoute = vi.fn();
+    const routes = [
+      {
+        summary: 'via Sin Ming Rd',
+        durationMinutes: 8,
+        distanceKm: 2.8,
+        traffic: 'Moderate' as const,
+        path: [],
+      },
+      {
+        summary: 'via Marymount Rd',
+        durationMinutes: 11,
+        distanceKm: 3.5,
+        traffic: 'Light' as const,
+        path: [],
+      },
+    ];
+
+    render(
+      <NavigationBottomSheet
+        {...defaultProps}
+        drivingRoutes={routes}
+        activeRouteIndex={0}
+        onSelectRoute={handleSelectRoute}
+      />
+    );
+
+    expect(screen.getByText('Available Routes')).toBeTruthy();
+    expect(screen.getByText('via Marymount Rd')).toBeTruthy();
+
+    const altButton = screen.getByRole('button', { name: /Select route 2: via Marymount Rd/i });
+    fireEvent.click(altButton);
+
+    expect(handleSelectRoute).toHaveBeenCalledWith(1);
+  });
 });

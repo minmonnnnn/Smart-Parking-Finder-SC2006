@@ -2,22 +2,47 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { FormEvent, KeyboardEvent } from 'react'
 import type { FavouriteLocation } from '@smart-parking/shared-types'
 import { useAuth } from '../features/auth/AuthContext'
+import { loadSession } from '../features/auth/authStorage'
 import { deleteFavourite, listFavourites, renameFavourite } from '../features/favourites/favouritesApi'
 import { useFavouriteDeletion } from '../features/favourites/useFavouriteDeletion'
+import { MobileHeader } from '../components/MobileHeader'
 import '../features/favourites/favourites.css'
 
 interface FavouritesPageProps {
   onSelect(favourite: FavouriteLocation): void
   onSearch(): void
+  onNavigate?(page: 'search' | 'favourites' | 'profile' | 'navigation'): void
+  onLogout?(): void
 }
 
 // Displays the authenticated user's saved locations and supports selection, renaming and deletion with undo
-export function FavouritesPage({ onSelect, onSearch }: FavouritesPageProps) {
-  const { session } = useAuth()
-  return <FavouritesSession key={session?.token ?? ''} token={session?.token} onSelect={onSelect} onSearch={onSearch} />
+export function FavouritesPage({ onSelect, onSearch, onNavigate, onLogout }: FavouritesPageProps) {
+  const { session, logout } = useAuth()
+
+  return (
+    <>
+      <MobileHeader
+        title="Saved locations"
+        onNavigate={onNavigate || ((p) => { if (p === 'search' || p === 'navigation') onSearch(); })}
+        onLogout={onLogout || logout}
+      />
+      <FavouritesSession
+        key={session?.token ?? ''}
+        token={session?.token}
+        onSelect={onSelect}
+        onSearch={onSearch}
+        onNavigate={onNavigate}
+        onLogout={onLogout}
+      />
+    </>
+  )
 }
 
-function FavouritesSession({ token, onSelect, onSearch }: FavouritesPageProps & { token: string | undefined }) {
+function FavouritesSession({
+  token,
+  onSelect,
+  onSearch,
+}: FavouritesPageProps & { token: string | undefined }) {
   const [favourites, setFavourites] = useState<FavouriteLocation[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
@@ -32,7 +57,15 @@ function FavouritesSession({ token, onSelect, onSearch }: FavouritesPageProps & 
   const undoRef = useRef<HTMLButtonElement>(null)
   const restoreFocusRef = useRef(false)
   const requestGenerationRef = useRef(0)
-  const deletion = useFavouriteDeletion((id) => token ? deleteFavourite(token, id) : Promise.reject(new Error('Sign in to manage saved locations')))
+  const deletion = useFavouriteDeletion(
+    (id) => (token ? deleteFavourite(token, id) : Promise.reject(new Error('Sign in to manage saved locations'))),
+    {
+      shouldFlushOnUnmount: () => {
+        const active = loadSession()
+        return Boolean(token && active && active.token === token)
+      },
+    },
+  )
 
   const load = useCallback(async () => {
     const generation = ++requestGenerationRef.current
@@ -58,6 +91,17 @@ function FavouritesSession({ token, onSelect, onSearch }: FavouritesPageProps & 
     void Promise.resolve().then(() => { if (active) void load() })
     return () => { active = false; requestGenerationRef.current += 1 }
   }, [load])
+
+  useEffect(() => {
+    function handleBeforeUnload() {
+      const active = loadSession()
+      if (token && active && active.token === token) {
+        deletion.flush()
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [token, deletion])
 
   useEffect(() => {
     if (confirming) cancelDeleteRef.current?.focus()
@@ -130,6 +174,18 @@ function FavouritesSession({ token, onSelect, onSearch }: FavouritesPageProps & 
     setConfirming(null)
   }
 
+  function handleSelect(favourite: FavouriteLocation) {
+    if (editingId !== favourite.id) {
+      deletion.flush()
+      onSelect(favourite)
+    }
+  }
+
+  function handleSearch() {
+    deletion.flush()
+    onSearch()
+  }
+
   const visible = favourites?.filter((favourite) => !deletion.isHidden(favourite.id))
 
   return <main className="favourites-screen">
@@ -148,7 +204,7 @@ function FavouritesSession({ token, onSelect, onSearch }: FavouritesPageProps & 
       {!loading && !loadError && visible?.length === 0 && <div className="favourites-empty">
         <h2>No saved locations yet</h2>
         <p>Search for a destination and save it here for next time.</p>
-        <button type="button" className="favourites-primary" onClick={onSearch}>Search destinations</button>
+        <button type="button" className="favourites-primary" onClick={handleSearch}>Search destinations</button>
       </div>}
       {!loading && !loadError && visible && visible.length > 0 && <ul className="favourites-list">
         {visible.map((favourite) => (
@@ -158,15 +214,11 @@ function FavouritesSession({ token, onSelect, onSearch }: FavouritesPageProps & 
             tabIndex={0}
             role="button"
             aria-label={`View details for ${favourite.locationName}`}
-            onClick={() => {
-              if (editingId !== favourite.id) {
-                onSelect(favourite)
-              }
-            }}
+            onClick={() => handleSelect(favourite)}
             onKeyDown={(e) => {
               if (editingId !== favourite.id && (e.key === 'Enter' || e.key === ' ')) {
                 e.preventDefault()
-                onSelect(favourite)
+                handleSelect(favourite)
               }
             }}
           >

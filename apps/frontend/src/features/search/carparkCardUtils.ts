@@ -11,6 +11,7 @@ export interface CarparkCardData {
   carparkType?: string;
   latitude?: number;
   longitude?: number;
+  recommendationScore?: number;
 }
 
 export interface RawCarparkInput {
@@ -28,6 +29,7 @@ export interface RawCarparkInput {
     totalLots?: number;
     hasEvCharging?: boolean;
     parkingCost?: number | null;
+    recommendationScore?: number;
   };
   availability?: {
     availableLots?: number;
@@ -51,6 +53,7 @@ export interface RawCarparkInput {
   availableLots?: number;
   hasEvCharging?: boolean;
   parkingCost?: number | null;
+  recommendationScore?: number;
 }
 
 export function availabilityTone(pct: number): 'success' | 'warning' | 'danger' {
@@ -87,6 +90,6 @@ export function toCarparkCardData(item: RawCarparkInput): CarparkCardData {
     carparkType: carpark.carParkType || 'Multi-storey',
     latitude: carpark.latitude ?? carpark.lat,
     longitude: carpark.longitude ?? carpark.lng,
+    recommendationScore: item.recommendationScore ?? carpark.recommendationScore,
   };
 }
-

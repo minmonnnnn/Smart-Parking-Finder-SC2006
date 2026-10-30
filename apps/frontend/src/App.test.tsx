@@ -75,3 +75,4 @@ describe('App flow', () => {
     await user.click(await screen.findByRole('button', { name: 'Search destinations' }))
     expect(await screen.findByRole('textbox', { name: 'Destination' })).toBeInTheDocument()
   })
+})

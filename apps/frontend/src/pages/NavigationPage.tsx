@@ -4,7 +4,6 @@ import { NavigationMap } from "../features/navigation/components/NavigationMap";
 import { NavigationBottomSheet } from "../features/navigation/components/NavigationBottomSheet";
 import {
   SearchBar,
-  type AvailabilityLevel,
   type YesNo,
 } from "../features/search/SearchBar";
 import { CarparkCard } from "../features/search/CarparkCard";
@@ -102,9 +101,7 @@ export function NavigationPage({
   const [evFilter, setEvFilter] = useState<YesNo | null>(null);
   const [shelteredFilter, setShelteredFilter] = useState<YesNo | null>(null);
   const [pricingAsc, setPricingAsc] = useState(false);
-  const [availabilityFilter, setAvailabilityFilter] = useState<
-    Set<AvailabilityLevel>
-  >(new Set());
+  const [availabilityDesc, setAvailabilityDesc] = useState(false);
 
   // Live watchPosition to continuously update user position and recalculate route as device moves
   useEffect(() => {
@@ -332,23 +329,6 @@ export function NavigationPage({
           if (shelteredFilter === "no") {
             cardItems = cardItems.filter((cp) => !cp.isSheltered);
           }
-          if (availabilityFilter.size > 0) {
-            cardItems = cardItems.filter((cp) => {
-              const pct =
-                cp.totalLots > 0 ? (cp.availableLots / cp.totalLots) * 100 : 0;
-              const level: AvailabilityLevel =
-                pct >= 30 ? "high" : pct >= 10 ? "moderate" : "low";
-              return availabilityFilter.has(level);
-            });
-          }
-
-          if (pricingAsc) {
-            cardItems.sort(
-              (a, b) =>
-                (a.parkingCost ?? Infinity) - (b.parkingCost ?? Infinity),
-            );
-          }
-
           setRecommendedCarparks(cardItems);
           setIsLoadingCarparks(false);
           return;
@@ -401,25 +381,10 @@ export function NavigationPage({
       } else if (shelteredFilter === "no") {
         fallbackItems = fallbackItems.filter((cp) => !cp.isSheltered);
       }
-      if (availabilityFilter.size > 0) {
-        fallbackItems = fallbackItems.filter((cp) => {
-          const pct =
-            cp.totalLots > 0 ? (cp.availableLots / cp.totalLots) * 100 : 0;
-          const level: AvailabilityLevel =
-            pct >= 30 ? "high" : pct >= 10 ? "moderate" : "low";
-          return availabilityFilter.has(level);
-        });
-      }
-      if (pricingAsc) {
-        fallbackItems.sort(
-          (a, b) => (a.parkingCost ?? Infinity) - (b.parkingCost ?? Infinity),
-        );
-      }
-
       setRecommendedCarparks(fallbackItems);
       setIsLoadingCarparks(false);
     },
-    [evFilter, shelteredFilter, availabilityFilter, pricingAsc],
+    [evFilter, shelteredFilter],
   );
 
   //if filtering refetch carparks
@@ -496,21 +461,22 @@ export function NavigationPage({
     setIsSheetCollapsed(false);
   };
 
-  const toggleAvailability = (level: AvailabilityLevel) => {
-    setAvailabilityFilter((prev) => {
-      const next = new Set(prev);
-      if (next.has(level)) next.delete(level);
-      else next.add(level);
-      return next;
-    });
-  };
-
   const clearFilters = () => {
     setPricingAsc(false);
     setEvFilter(null);
     setShelteredFilter(null);
-    setAvailabilityFilter(new Set());
+    setAvailabilityDesc(false);
   };
+
+  const displayCarparks = [...recommendedCarparks].sort((a, b) => {
+    if (availabilityDesc) {
+      if (b.availableLots !== a.availableLots) return b.availableLots - a.availableLots;
+    }
+    if (pricingAsc) {
+      return (a.parkingCost ?? Infinity) - (b.parkingCost ?? Infinity);
+    }
+    return 0;
+  });
 
   // Cancels active navigation, carparks list & search session
   const handleCancelNavigation = () => {
@@ -562,8 +528,8 @@ export function NavigationPage({
             onShelteredFilter={setShelteredFilter}
             pricingAsc={pricingAsc}
             onPricingAsc={setPricingAsc}
-            availabilityFilter={availabilityFilter}
-            onAvailabilityFilter={toggleAvailability}
+            availabilityDesc={availabilityDesc}
+            onAvailabilityDesc={setAvailabilityDesc}
             onClearFilters={clearFilters}
             placeholder={`Search destination (current: ${destinationLocation.main || destinationLocation.name || "Destination"})`}
             suggestions={suggestions}
@@ -619,7 +585,7 @@ export function NavigationPage({
               </div>
             ) : (
               <div className={styles.recommendedCarparksScrollArea}>
-                {recommendedCarparks.map((cp, idx) => (
+                {displayCarparks.map((cp, idx) => (
                   <CarparkCard
                     key={cp.carParkNo || `${cp.name}-${idx}`}
                     cp={cp}

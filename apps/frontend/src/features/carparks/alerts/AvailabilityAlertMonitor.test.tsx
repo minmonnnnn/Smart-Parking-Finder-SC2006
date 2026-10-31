@@ -1,6 +1,9 @@
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { AvailabilityAlertMonitor } from "./AvailabilityAlertMonitor";
+import {
+  AvailabilityAlertMonitor,
+  SIMULATE_ALERT_EVENT,
+} from "./AvailabilityAlertMonitor";
 import { fetchAvailability, type AvailabilityInfo } from "../availability/api";
 
 vi.mock("../availability/api", () => ({
@@ -64,6 +67,33 @@ describe("AvailabilityAlertMonitor", () => {
     expect(screen.getByRole("status").textContent).toBe(
       "AK19 availability changed from High to Moderate. 20 of 100 lots available.",
     );
+  });
+
+  it("notifies when a simulated availability alert is triggered", async () => {
+    render(<AvailabilityAlertMonitor carParkNo="AK19" />);
+    await tick();
+
+    expect(screen.queryByRole("status")).toBeNull();
+
+    await act(async () => {
+      window.dispatchEvent(
+        new CustomEvent(SIMULATE_ALERT_EVENT, {
+          detail: { carParkNo: "AK19" },
+        }),
+      );
+    });
+
+    expect(screen.getByRole("status").textContent).toBe(
+      "AK19 availability changed from High to Moderate. 24 of 120 lots available.",
+    );
+
+    // Dismissing clears it
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Dismiss availability notification for AK19",
+      }),
+    );
+    expect(screen.queryByRole("status")).toBeNull();
   });
 
   it("does not notify when availability remains in the same tier", async () => {

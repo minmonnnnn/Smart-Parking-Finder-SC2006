@@ -7,8 +7,13 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
-import { vars } from "../../../components";
-import { AvailabilityAlertMonitor } from "./AvailabilityAlertMonitor";
+import { Button, vars } from "../../../components";
+import {
+  AvailabilityAlertMonitor,
+  SIMULATE_ALERT_EVENT,
+  type AvailabilityTestWindow,
+  type SimulateAvailabilityOptions,
+} from "./AvailabilityAlertMonitor";
 import { createAvailabilityAlert, updateAvailabilityAlert } from "./api";
 
 interface SubscriptionState {
@@ -53,6 +58,12 @@ function SessionAlertsProvider({
   const [subscriptions, setSubscriptions] = useState(
     () => new Map<string, SubscriptionState>(),
   );
+  const [simulatedNotification, setSimulatedNotification] = useState<{
+    message: string;
+    error: string | null;
+    carParkNo?: string;
+  } | null>(null);
+
   const subscriptionsRef = useRef(subscriptions);
   const active = useRef(false);
 
@@ -60,6 +71,63 @@ function SessionAlertsProvider({
     active.current = true;
     return () => {
       active.current = false;
+    };
+  }, []);
+
+  // Development & Testing helper: allows simulating an availability alert from console or UI
+  useEffect(() => {
+    const testWindow = window as unknown as AvailabilityTestWindow;
+
+    testWindow.__simulateAvailabilityAlert = (
+      options?: SimulateAvailabilityOptions,
+    ) => {
+      const activeCarparks = [...subscriptionsRef.current.entries()]
+        .filter(([, s]) => s.enabled)
+        .map(([cp]) => cp);
+
+      const targetCarPark =
+        options?.carParkNo ??
+        (activeCarparks.length > 0 ? activeCarparks[0] : "TP21");
+
+      const hasActiveMonitor =
+        activeCarparks.length > 0 &&
+        (!options?.carParkNo || activeCarparks.includes(options.carParkNo));
+
+      if (hasActiveMonitor) {
+        window.dispatchEvent(
+          new CustomEvent(SIMULATE_ALERT_EVENT, {
+            detail: {
+              carParkNo: targetCarPark,
+              ...options,
+            },
+          }),
+        );
+      } else {
+        const from = options?.fromStatus ?? "High";
+        const to =
+          options?.toStatus ??
+          (from === "High" ? "Moderate" : from === "Moderate" ? "Low" : "High");
+        const total = options?.totalLots ?? 120;
+        const available =
+          options?.availableLots ??
+          (to === "High" ? 48 : to === "Moderate" ? 24 : 5);
+        const msg =
+          options?.message ??
+          `${targetCarPark} availability changed from ${from} to ${to}. ${available} of ${total} lots available.`;
+
+        console.log(
+          `[Test Alert] Simulated availability change for ${targetCarPark}: ${from} -> ${to}`,
+        );
+        setSimulatedNotification({
+          message: msg,
+          error: options?.error ?? null,
+          carParkNo: targetCarPark,
+        });
+      }
+    };
+
+    return () => {
+      delete testWindow.__simulateAvailabilityAlert;
     };
   }, []);
 
@@ -118,12 +186,14 @@ function SessionAlertsProvider({
     }
   }
 
+  const showPortal =
+    (userId && accessToken) || simulatedNotification !== null;
+
   return (
     <AlertsContext.Provider value={{ userId, subscriptions, setEnabled }}>
       {children}
 
-      {userId &&
-        accessToken &&
+      {showPortal &&
         createPortal(
           <div
             aria-label="Availability notifications"
@@ -142,13 +212,57 @@ function SessionAlertsProvider({
               pointerEvents: "none",
             }}
           >
-            {[...subscriptions.entries()].map(([carParkNo, state]) =>
-              state.enabled ? (
-                <AvailabilityAlertMonitor
-                  key={carParkNo}
-                  carParkNo={carParkNo}
-                />
-              ) : null,
+            {userId &&
+              accessToken &&
+              [...subscriptions.entries()].map(([carParkNo, state]) =>
+                state.enabled ? (
+                  <AvailabilityAlertMonitor
+                    key={carParkNo}
+                    carParkNo={carParkNo}
+                  />
+                ) : null,
+              )}
+
+            {simulatedNotification && (
+              <div
+                style={{
+                  padding: vars.space[3],
+                  background: vars.color.background,
+                  color: vars.color.textPrimary,
+                  border: `1px solid ${vars.color.border}`,
+                  borderRadius: vars.radius.md,
+                  boxShadow: vars.shadow.raised,
+                  fontFamily: vars.font.family,
+                  fontSize: vars.fontSize.sm,
+                  pointerEvents: "auto",
+                }}
+              >
+                <p role="status" style={{ margin: 0 }}>
+                  {simulatedNotification.message}
+                </p>
+
+                {simulatedNotification.error && (
+                  <p
+                    role="alert"
+                    style={{ margin: 0, color: vars.color.danger }}
+                  >
+                    {simulatedNotification.error}
+                  </p>
+                )}
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-label={`Dismiss availability notification${
+                    simulatedNotification.carParkNo
+                      ? ` for ${simulatedNotification.carParkNo}`
+                      : ""
+                  }`}
+                  onClick={() => setSimulatedNotification(null)}
+                >
+                  Dismiss
+                </Button>
+              </div>
             )}
           </div>,
           document.body,

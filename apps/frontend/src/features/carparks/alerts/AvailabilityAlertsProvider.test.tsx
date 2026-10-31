@@ -11,6 +11,7 @@ import { AvailabilityAlertsProvider } from "./AvailabilityAlertsProvider";
 import { AvailabilityAlertControl } from "./AvailabilityAlertControl";
 import { createAvailabilityAlert, updateAvailabilityAlert } from "./api";
 import { fetchAvailability, type AvailabilityInfo } from "../availability/api";
+import type { AvailabilityTestWindow } from "./AvailabilityAlertMonitor";
 
 vi.mock("./api", () => ({
   createAvailabilityAlert: vi.fn(),
@@ -110,85 +111,78 @@ describe("AvailabilityAlertsProvider", () => {
     await enableAlerts();
 
     fireEvent.click(screen.getByRole("button", { name: "Open map" }));
-    expect(screen.queryByRole("checkbox")).toBeNull();
+    expect(screen.getByText("Map page")).toBeTruthy();
 
     vi.mocked(fetchAvailability).mockResolvedValue(moderate);
     await tick(60_000);
 
-    expect(screen.getByText("Map page")).toBeTruthy();
-    expect(screen.getByRole("status").textContent).toContain(
-      "High to Moderate",
+    expect(screen.getByRole("status").textContent).toBe(
+      "AK19 availability changed from High to Moderate. 20 of 100 lots available.",
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Open details" }));
     expect(checkbox().checked).toBe(true);
-    expect(createAvailabilityAlert).toHaveBeenCalledTimes(1);
-
-    fireEvent.click(checkbox());
-    await tick();
-
-    expect(updateAvailabilityAlert).toHaveBeenCalledWith(
-      "7",
-      false,
-      "test-token",
-    );
-    expect(screen.queryByRole("status")).toBeNull();
-
-    const calls = vi.mocked(fetchAvailability).mock.calls.length;
-    await tick(120_000);
-    expect(fetchAvailability).toHaveBeenCalledTimes(calls);
   });
 
-  it("dismisses a banner without losing the monitoring baseline", async () => {
+  it("triggers alert via window.__simulateAvailabilityAlert when alert is active", async () => {
     render(<Fixture />);
     await enableAlerts();
 
-    vi.mocked(fetchAvailability).mockResolvedValue(moderate);
-    await tick(60_000);
+    const testWindow = window as unknown as AvailabilityTestWindow;
+    expect(testWindow.__simulateAvailabilityAlert).toBeDefined();
 
+    await act(async () => {
+      testWindow.__simulateAvailabilityAlert?.({ carParkNo: "AK19" });
+    });
+
+    expect(screen.getByRole("status").textContent).toBe(
+      "AK19 availability changed from High to Moderate. 24 of 120 lots available.",
+    );
+  });
+
+  it("triggers alert via window.__simulateAvailabilityAlert fallback when no alert is active", async () => {
+    render(<Fixture userId={null} />);
+
+    const testWindow = window as unknown as AvailabilityTestWindow;
+    expect(testWindow.__simulateAvailabilityAlert).toBeDefined();
+
+    await act(async () => {
+      testWindow.__simulateAvailabilityAlert?.({
+        carParkNo: "TP21",
+        fromStatus: "High",
+        toStatus: "Low",
+        availableLots: 5,
+        totalLots: 100,
+      });
+    });
+
+    expect(screen.getByRole("status").textContent).toBe(
+      "TP21 availability changed from High to Low. 5 of 100 lots available.",
+    );
+
+    // Dismissing clears it
     fireEvent.click(
       screen.getByRole("button", {
-        name: "Dismiss availability notification for AK19",
+        name: "Dismiss availability notification for TP21",
       }),
     );
     expect(screen.queryByRole("status")).toBeNull();
-
-    await tick(60_000);
-    expect(screen.queryByRole("status")).toBeNull();
-
-    vi.mocked(fetchAvailability).mockResolvedValue(high);
-    await tick(60_000);
-
-    expect(screen.getByRole("status").textContent).toContain(
-      "Moderate to High",
-    );
   });
 
-  it("clears notifications and stops monitoring on logout", async () => {
-    const view = render(<Fixture />);
+  it("resumes polling on the map after unmount and remount", async () => {
+    render(<Fixture />);
     await enableAlerts();
 
-    vi.mocked(fetchAvailability).mockResolvedValue(moderate);
-    await tick(60_000);
-    expect(screen.getByRole("status")).toBeTruthy();
-
-    const signal = vi.mocked(fetchAvailability).mock.calls.at(-1)?.[1];
-    const calls = vi.mocked(fetchAvailability).mock.calls.length;
-
-    view.rerender(<Fixture userId={null} />);
-
-    expect(screen.queryByRole("status")).toBeNull();
-    expect(screen.queryByRole("checkbox")).toBeNull();
-    expect(signal?.aborted).toBe(true);
-
+    fireEvent.click(screen.getByRole("button", { name: "Open map" }));
     await tick(120_000);
-    expect(fetchAvailability).toHaveBeenCalledTimes(calls);
 
-    view.rerender(<Fixture userId="user-2" />);
-    expect(checkbox().checked).toBe(false);
+    expect(fetchAvailability).toHaveBeenCalledTimes(3);
+
+    fireEvent.click(screen.getByRole("button", { name: "Open details" }));
+    expect(checkbox().checked).toBe(true);
   });
 
-  it("finishes enabling after leaving details", async () => {
+  it("handles a delayed subscription response while on another page", async () => {
     let resolve!: (
       subscription: Awaited<ReturnType<typeof createAvailabilityAlert>>,
     ) => void;

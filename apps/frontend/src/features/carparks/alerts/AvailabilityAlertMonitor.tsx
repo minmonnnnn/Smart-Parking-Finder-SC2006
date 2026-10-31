@@ -2,6 +2,22 @@ import { useEffect, useState } from "react";
 import { fetchAvailability, type AvailabilityInfo } from "../availability/api";
 import { Button, vars } from "../../../components";
 
+export interface SimulateAvailabilityOptions {
+  carParkNo?: string;
+  fromStatus?: AvailabilityInfo["status"];
+  toStatus?: AvailabilityInfo["status"];
+  availableLots?: number;
+  totalLots?: number;
+  message?: string;
+  error?: string;
+}
+
+export interface AvailabilityTestWindow {
+  __simulateAvailabilityAlert?: (options?: SimulateAvailabilityOptions) => void;
+}
+
+export const SIMULATE_ALERT_EVENT = "smart-parking:simulate-availability-alert";
+
 interface AvailabilityAlertMonitorProps {
   carParkNo: string;
 }
@@ -83,10 +99,48 @@ function Monitor({ carParkNo }: AvailabilityAlertMonitorProps) {
       void refresh();
     }, 60_000);
 
+    const handleSimulate = (event: Event) => {
+      const customEvent = event as CustomEvent<SimulateAvailabilityOptions>;
+      const detail = customEvent.detail;
+      if (detail?.carParkNo && detail.carParkNo !== carParkNo) return;
+
+      if (detail?.error) {
+        setState({ message: null, error: detail.error });
+        return;
+      }
+
+      const from = detail?.fromStatus ?? previousStatus ?? "High";
+      const to =
+        detail?.toStatus ??
+        (from === "High" ? "Moderate" : from === "Moderate" ? "Low" : "High");
+      const total = detail?.totalLots ?? 120;
+      const available =
+        detail?.availableLots ??
+        (to === "High" ? 48 : to === "Moderate" ? 24 : 5);
+      const msg =
+        detail?.message ??
+        `${carParkNo} availability changed from ${from} to ${to}. ${available} of ${total} lots available.`;
+
+      previousStatus = to;
+      console.log(
+        `[Test Alert] Simulated availability change for ${carParkNo}: ${from} -> ${to}`,
+      );
+      setState({ message: msg, error: null });
+    };
+
+    window.addEventListener(
+      SIMULATE_ALERT_EVENT,
+      handleSimulate as EventListener,
+    );
+
     return () => {
       active = false;
       window.clearInterval(intervalId);
       controller?.abort();
+      window.removeEventListener(
+        SIMULATE_ALERT_EVENT,
+        handleSimulate as EventListener,
+      );
     };
   }, [carParkNo]);
 

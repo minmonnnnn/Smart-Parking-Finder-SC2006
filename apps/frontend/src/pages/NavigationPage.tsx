@@ -80,7 +80,7 @@ export function NavigationPage({
   //maps const
   const [isLocating, setIsLocating] = useState(false);
   const [isSheetCollapsed, setIsSheetCollapsed] = useState(false);
-  const [isSheetVisible, setIsSheetVisible] = useState(true);
+  const [isSheetVisible, setIsSheetVisible] = useState(!!initialCarparkDetails);
   const [isSideNavOpen, setIsSideNavOpen] = useState(false);
 
   //rcommended park const

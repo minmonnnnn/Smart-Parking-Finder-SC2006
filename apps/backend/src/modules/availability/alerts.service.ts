@@ -1,9 +1,6 @@
 import type { AvailabilityStatus } from "./service.js";
-import { getAvailabilityByCarParkNo } from "./repository.js";
-import {
-  getEnabledAlerts,
-  updateAlertLastKnownStatus,
-} from "./alerts.repository.js";
+import type { AvailabilityRepository } from "./repository.js";
+import type { AlertRepository } from "./alerts.repository.js";
 
 export interface AvailabilityNotification {
   alertId: number;
@@ -17,6 +14,14 @@ export type SendAvailabilityNotification = (
   notification: AvailabilityNotification,
 ) => Promise<void>;
 
+export interface AlertCheckDependencies {
+  alerts: Pick<
+    AlertRepository,
+    "getEnabledAlerts" | "updateAlertLastKnownStatus"
+  >;
+  availability: Pick<AvailabilityRepository, "getAvailabilityByCarParkNo">;
+}
+
 /** A significant change is a change between availability tiers. */
 export function hasSignificantAvailabilityChange(
   previousStatus: AvailabilityStatus,
@@ -27,24 +32,38 @@ export function hasSignificantAvailabilityChange(
 
 export async function checkAvailabilityAlerts(
   sendNotification: SendAvailabilityNotification,
+  dependencies: AlertCheckDependencies,
 ): Promise<void> {
-  for (const alert of getEnabledAlerts()) {
-    const availability = getAvailabilityByCarParkNo(alert.carParkNo);
+  const alerts = await dependencies.alerts.getEnabledAlerts();
 
-    if (!availability || availability.isStale) {
-      continue;
-    }
-
-    if (
-      !hasSignificantAvailabilityChange(
-        alert.lastKnownStatus,
-        availability.status,
-      )
-    ) {
-      continue;
-    }
+  for (const alert of alerts) {
+    if (!alert.enabled) continue;
 
     try {
+      const availability =
+        await dependencies.availability.getAvailabilityByCarParkNo(
+          alert.carParkNo,
+        );
+
+      if (!availability || availability.isStale) continue;
+
+      if (alert.lastKnownStatus === null) {
+        await dependencies.alerts.updateAlertLastKnownStatus(
+          alert.id,
+          availability.status,
+        );
+        continue;
+      }
+
+      if (
+        !hasSignificantAvailabilityChange(
+          alert.lastKnownStatus,
+          availability.status,
+        )
+      ) {
+        continue;
+      }
+
       await sendNotification({
         alertId: alert.id,
         userId: alert.userId,
@@ -53,9 +72,12 @@ export async function checkAvailabilityAlerts(
         currentStatus: availability.status,
       });
 
-      updateAlertLastKnownStatus(alert.id, availability.status);
+      await dependencies.alerts.updateAlertLastKnownStatus(
+        alert.id,
+        availability.status,
+      );
     } catch (error) {
-      console.error(`Failed to send availability alert ${alert.id}:`, error);
+      console.error(`Failed to process availability alert ${alert.id}:`, error);
     }
   }
 }

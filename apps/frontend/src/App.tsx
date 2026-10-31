@@ -1,115 +1,138 @@
-import { useState } from 'react'
-import { AuthProvider, useAuth } from './features/auth/AuthContext'
-import SearchPage, { type InitialDestination } from './features/search/SearchPage'
-import { SignInPage } from './pages/SignInPage'
-import { SignUpPage } from './pages/SignUpPage'
-import { ProfilePage } from './pages/ProfilePage'
-import { FavouritesPage } from './pages/FavouritesPage'
-import { NavigationPage } from './pages/NavigationPage'
-import { CarparkDetailPage } from './pages/CarparkDetailPage'
-import type { CarparkDetails } from '@smart-parking/shared-types'
-import './App.css'
+import { useState } from "react";
+import { AuthProvider, useAuth } from "./features/auth/AuthContext";
+import SearchPage, {
+  type InitialDestination,
+} from "./features/search/SearchPage";
+import { SignInPage } from "./pages/SignInPage";
+import { SignUpPage } from "./pages/SignUpPage";
+import { ProfilePage } from "./pages/ProfilePage";
+import { FavouritesPage } from "./pages/FavouritesPage";
+import { NavigationPage } from "./pages/NavigationPage";
+import { CarparkDetailPage } from "./pages/CarparkDetailPage";
+import type { CarparkDetails } from "@smart-parking/shared-types";
+import "./App.css";
+import { AvailabilityAlertsProvider } from "./features/carparks/alerts/AvailabilityAlertsProvider";
 
-type Page = 'sign-in' | 'sign-up' | 'search' | 'profile' | 'favourites' | 'navigation' | 'carpark-detail'
+type Page =
+  | "sign-in"
+  | "sign-up"
+  | "search"
+  | "profile"
+  | "favourites"
+  | "navigation"
+  | "carpark-detail";
 
 function AppShell() {
-  const { session, logout } = useAuth()
-  const [page, setPage] = useState<Page>('sign-in')
-  const [handoff, setHandoff] = useState('')
-  const [selectedCarParkNo, setSelectedCarParkNo] = useState<string | null>(null)
-  const [selectedCarparkDetails, setSelectedCarparkDetails] = useState<CarparkDetails | undefined>(undefined)
-  const [selectedDestination] = useState<InitialDestination | null>(null)
-  const [returnPage, setReturnPage] = useState<Page>('search')
+  const { session, logout } = useAuth();
+  const [page, setPage] = useState<Page>("sign-in");
+  const [handoff, setHandoff] = useState("");
+  const [selectedCarParkNo, setSelectedCarParkNo] = useState<string | null>(
+    null,
+  );
+  const [selectedCarparkDetails, setSelectedCarparkDetails] = useState<
+    CarparkDetails | undefined
+  >(undefined);
+  const [selectedDestination] = useState<InitialDestination | null>(null);
+  const [returnPage, setReturnPage] = useState<Page>("search");
 
   const activePage: Page = session
-    ? page === 'search' || page === 'favourites' || page === 'navigation' || page === 'carpark-detail'
+    ? page === "search" ||
+      page === "favourites" ||
+      page === "navigation" ||
+      page === "carpark-detail"
       ? page
-      : 'profile'
-    : page === 'sign-up'
-      ? 'sign-up'
-      : 'sign-in'
+      : "profile"
+    : page === "sign-up"
+      ? "sign-up"
+      : "sign-in";
 
   function navigate(next: Page) {
-    setHandoff('')
-    setPage(next)
+    setHandoff("");
+    setPage(next);
   }
 
   function openCarparkDetail(carParkNo: string, details?: CarparkDetails) {
-    setSelectedCarParkNo(carParkNo)
-    setSelectedCarparkDetails(details)
-    setPage('carpark-detail')
+    setSelectedCarParkNo(carParkNo);
+    setSelectedCarparkDetails(details);
+    setPage("carpark-detail");
   }
 
   const content = (() => {
     switch (activePage) {
-      case 'sign-in':
+      case "sign-in":
         return (
           <SignInPage
-            onSignedIn={() => navigate('navigation')}
-            onSwitchMode={() => navigate('sign-up')}
+            onSignedIn={() => navigate("navigation")}
+            onSwitchMode={() => navigate("sign-up")}
           />
-        )
+        );
 
-      case 'sign-up':
-        return <SignUpPage onSwitchMode={() => navigate('sign-in')} />
+      case "sign-up":
+        return <SignUpPage onSwitchMode={() => navigate("sign-in")} />;
 
-      case 'search':
-      case 'carpark-detail':
+      case "search":
+      case "carpark-detail":
         return (
           <>
-            <div style={activePage === 'carpark-detail' ? { display: 'none' } : undefined}>
+            <div
+              style={
+                activePage === "carpark-detail"
+                  ? { display: "none" }
+                  : undefined
+              }
+            >
               <SearchPage
                 onSelectCarpark={(carParkNo) => {
-                  setReturnPage('search')
-                  openCarparkDetail(carParkNo)
+                  setReturnPage("search");
+                  openCarparkDetail(carParkNo);
                 }}
                 initialDestination={selectedDestination}
               />
             </div>
-            {activePage === 'carpark-detail' && selectedCarParkNo && (
+            {activePage === "carpark-detail" && selectedCarParkNo && (
               <CarparkDetailPage
                 carParkNo={selectedCarParkNo}
                 initialDetails={selectedCarparkDetails}
                 onBack={() => navigate(returnPage)}
                 onNavigate={(details) => {
                   if (details) {
-                    setSelectedCarParkNo(details.carpark.carParkNo)
-                    setSelectedCarparkDetails(details)
+                    setSelectedCarParkNo(details.carpark.carParkNo);
+                    setSelectedCarparkDetails(details);
                   }
-                  navigate('navigation')
+                  navigate("navigation");
                 }}
               />
             )}
           </>
-        )
+        );
 
-      case 'profile':
+      case "profile":
         return (
           <ProfilePage
-            onAccountDeleted={() => navigate('sign-in')}
+            onAccountDeleted={() => navigate("sign-in")}
             onNavigate={navigate}
             onLogout={logout}
           />
-        )
+        );
 
-      case 'favourites':
+      case "favourites":
         return (
           <FavouritesPage
             onSelect={(favourite) => {
-              setReturnPage('favourites')
+              setReturnPage("favourites");
               const initial: CarparkDetails = {
                 carpark: {
                   carParkNo: favourite.address || favourite.locationName,
                   address: favourite.address,
                   latitude: favourite.latitude,
                   longitude: favourite.longitude,
-                  carParkType: 'Multi-storey',
+                  carParkType: "Multi-storey",
                   isSheltered: true,
                   totalLots: 120,
                   freeParking: null,
-                  nightParking: 'YES',
+                  nightParking: "YES",
                   hasEvCharging: false,
-                  parkingSystem: 'Electronic',
+                  parkingSystem: "Electronic",
                   postalCode: null,
                   parkingCost: 0.6,
                   updatedAt: favourite.createdAt || new Date().toISOString(),
@@ -117,81 +140,91 @@ function AppShell() {
                 availability: {
                   availableLots: 48,
                   totalLots: 120,
-                  status: 'Moderate',
+                  status: "Moderate",
                   lastUpdated: new Date().toISOString(),
                   isStale: false,
                 },
-              }
-              openCarparkDetail(favourite.address || favourite.locationName, initial)
+              };
+              openCarparkDetail(
+                favourite.address || favourite.locationName,
+                initial,
+              );
             }}
-            onSearch={() => navigate('search')}
+            onSearch={() => navigate("search")}
             onNavigate={navigate}
             onLogout={logout}
           />
-        )
+        );
 
-      case 'navigation':
+      case "navigation":
         return (
           <NavigationPage
-            onBack={() => navigate(returnPage === 'favourites' ? 'favourites' : 'search')}
+            onBack={() =>
+              navigate(returnPage === "favourites" ? "favourites" : "search")
+            }
             initialCarparkNo={selectedCarParkNo}
             initialCarparkDetails={selectedCarparkDetails}
             onNavigate={navigate}
             onLogout={logout}
           />
-        )
+        );
     }
-  })()
+  })();
 
   return (
-    <div className="app-shell">
-      {session && (
-        <nav className="app-navigation" aria-label="Account navigation">
-          <button
-            type="button"
-            aria-current={activePage === 'profile' ? 'page' : undefined}
-            onClick={() => navigate('profile')}
-          >
-            Profile
-          </button>
+    <AvailabilityAlertsProvider
+      userId={session?.userId ?? null}
+      accessToken={session?.token ?? null}
+    >
+      <div className="app-shell">
+        {session && (
+          <nav className="app-navigation" aria-label="Account navigation">
+            <button
+              type="button"
+              aria-current={activePage === "profile" ? "page" : undefined}
+              onClick={() => navigate("profile")}
+            >
+              Profile
+            </button>
 
-          <button
-            type="button"
-            aria-current={activePage === 'favourites' ? 'page' : undefined}
-            onClick={() => navigate('favourites')}
-          >
-            Favourites
-          </button>
+            <button
+              type="button"
+              aria-current={activePage === "favourites" ? "page" : undefined}
+              onClick={() => navigate("favourites")}
+            >
+              Favourites
+            </button>
 
-          <button
-            type="button"
-            aria-current={activePage === 'navigation' ? 'page' : undefined}
-            onClick={() => navigate('navigation')}
-          >
-            Navigation
-          </button>
+            <button
+              type="button"
+              aria-current={activePage === "navigation" ? "page" : undefined}
+              onClick={() => navigate("navigation")}
+            >
+              Navigation
+            </button>
 
-          <button
-            type="button"
-            onClick={() => {
-              logout()
-              navigate('sign-in')
-            }}
-          >
-            Log out
-          </button>
-        </nav>
-      )}
+            <button
+              type="button"
+              onClick={() => {
+                logout();
+                navigate("sign-in");
+              }}
+            >
+              Log out
+            </button>
+          </nav>
+        )}
 
-      {session && handoff && (
-        <p className="app-handoff" role="status">
-          {handoff}
-        </p>
-      )}
+        {session && handoff && (
+          <p className="app-handoff" role="status">
+            {handoff}
+          </p>
+        )}
 
-      {content}
-    </div>
-  )
+        {content}
+      </div>
+    </AvailabilityAlertsProvider>
+  );
 }
 
 export default function App() {
@@ -199,5 +232,5 @@ export default function App() {
     <AuthProvider>
       <AppShell />
     </AuthProvider>
-  )
+  );
 }

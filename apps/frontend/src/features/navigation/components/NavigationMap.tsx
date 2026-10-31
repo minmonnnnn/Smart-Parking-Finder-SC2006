@@ -119,7 +119,9 @@ export function NavigationMap({
   //synchronise driving route path with polyline
   useEffect(() => {
     if (drivingPolylineRef.current) {
-      drivingPolylineRef.current.setPath(drivingPath || []);
+      const path = drivingPath && (drivingPath as unknown[]).length > 0 ? drivingPath : [];
+      drivingPolylineRef.current.setPath(path);
+      drivingPolylineRef.current.setVisible(path.length > 0);
     }
   }, [drivingPath]);
 

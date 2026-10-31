@@ -260,7 +260,11 @@ interface NavigationTestWindow {
   }, [walkingInfo]);
 
   const [hasArrived, setHasArrived] = useState(false);
-  const [remainingPath, setRemainingPath] = useState<{ lat: number; lng: number }[] | null>(null);
+  const [arrivedAtDestination, setArrivedAtDestination] = useState(false);
+  const [drivingComplete, setDrivingComplete] = useState(false);
+  const [remainingDrivingPath, setRemainingDrivingPath] = useState<{ lat: number; lng: number }[] | null>(null);
+  const [remainingWalkingPath, setRemainingWalkingPath] = useState<{ lat: number; lng: number }[] | null>(null);
+  const [simulatedRemainingMinutes, setSimulatedRemainingMinutes] = useState<number | null>(null);
 
   // Console helpers for demo/testing: simulate marker movement along the route
   useEffect(() => {
@@ -290,22 +294,29 @@ interface NavigationTestWindow {
       simulationTimeoutsRef.current.forEach(clearTimeout);
       simulationTimeoutsRef.current = [];
       const plainPath = path.map((p) => getLatLng(p as { lat: number; lng: number } | google.maps.LatLng));
-      setRemainingPath(plainPath);
-      let cumulativeMs = 0;
+      setRemainingDrivingPath(plainPath);
+
+      // Pre-compute cumulative delay for each point
+      const delays: number[] = [0];
+      for (let i = 0; i < plainPath.length - 1; i++) {
+        delays.push(delays[i]! + (haversineMeters(plainPath[i]!, plainPath[i + 1]!) / speedMs) * 1000);
+      }
+      const totalMs = delays[delays.length - 1]!;
+
       plainPath.forEach((point, i) => {
+        const remainingMs = totalMs - delays[i]!;
         const t = setTimeout(() => {
           setSimulatedOrigin({ lat: point.lat, lng: point.lng, name: 'Simulated Location' });
-          setRemainingPath(plainPath.slice(i));
+          setRemainingDrivingPath(plainPath.slice(i));
+          setSimulatedRemainingMinutes(Math.max(0, Math.round(remainingMs / 60000)));
           if (i === plainPath.length - 1) {
-            setRemainingPath(null);
+            setRemainingDrivingPath(null);
+            setSimulatedRemainingMinutes(null);
             setIsSimulating(false);
             onComplete();
           }
-        }, cumulativeMs);
+        }, delays[i]);
         simulationTimeoutsRef.current.push(t);
-        if (i < plainPath.length - 1) {
-          cumulativeMs += (haversineMeters(point, plainPath[i + 1]!) / speedMs) * 1000;
-        }
       });
     }
 
@@ -316,20 +327,19 @@ interface NavigationTestWindow {
         return;
       }
 
-      // Clear any running simulation
       simulationTimeoutsRef.current.forEach(clearTimeout);
       simulationTimeoutsRef.current = [];
       isSimulatingRef.current = true;
       setIsSimulating(true);
 
       const speedMs = (speedKmh * 1000) / 3600; // m/s
-      let cumulativeMs = 0;
 
       console.log(`[Sim] Starting simulation: ${path.length} points at ${speedKmh} km/h`);
 
       runPathSimulation(path, speedMs, () => {
         isSimulatingRef.current = false;
         setSimulatedOrigin(null);
+        setDrivingComplete(true);
         setHasArrived(true);
         console.log('[Sim] Arrived at carpark');
       });
@@ -341,7 +351,10 @@ interface NavigationTestWindow {
       isSimulatingRef.current = false;
       setIsSimulating(false);
       setSimulatedOrigin(null);
-      setRemainingPath(null);
+      setRemainingDrivingPath(null);
+      setRemainingWalkingPath(null);
+      setSimulatedRemainingMinutes(null);
+      setDrivingComplete(false);
       console.log('[Sim] Simulation stopped');
     };
 
@@ -638,9 +651,12 @@ interface NavigationTestWindow {
     setHasArrived(false);
     const path = walkingInfoRef.current?.path;
     if (!path || path.length < 2) return;
-    const walkingSpeedMs = 5 * 1000 / 3600; // 5 km/h in m/s
+    const walkingSpeedMs = (200 * 1000) / 3600; // fast for testing
     isSimulatingRef.current = true;
     setIsSimulating(true);
+
+    simulationTimeoutsRef.current.forEach(clearTimeout);
+    simulationTimeoutsRef.current = [];
 
     function getLatLng(point: { lat: number; lng: number } | google.maps.LatLng) {
       if (typeof (point as google.maps.LatLng).lat === 'function') {
@@ -661,27 +677,27 @@ interface NavigationTestWindow {
     }
 
     const plainPath = path.map((p) => getLatLng(p as { lat: number; lng: number } | google.maps.LatLng));
-    setRemainingPath(plainPath);
-    simulationTimeoutsRef.current.forEach(clearTimeout);
-    simulationTimeoutsRef.current = [];
-    let cumulativeMs = 0;
+    setRemainingWalkingPath(plainPath);
+
+    const delays: number[] = [0];
+    for (let i = 0; i < plainPath.length - 1; i++) {
+      delays.push(delays[i]! + (haversineMeters(plainPath[i]!, plainPath[i + 1]!) / walkingSpeedMs) * 1000);
+    }
+
     plainPath.forEach((point, i) => {
       const t = setTimeout(() => {
         setSimulatedOrigin({ lat: point.lat, lng: point.lng, name: 'Walking' });
-        setRemainingPath(plainPath.slice(i));
+        setRemainingWalkingPath(plainPath.slice(i));
         if (i === plainPath.length - 1) {
           isSimulatingRef.current = false;
           setIsSimulating(false);
           setSimulatedOrigin(null);
-          setRemainingPath(null);
-          setHasArrived(true);
+          setRemainingWalkingPath(null);
+          setArrivedAtDestination(true);
           console.log('[Sim] Arrived at destination');
         }
-      }, cumulativeMs);
+      }, delays[i]);
       simulationTimeoutsRef.current.push(t);
-      if (i < plainPath.length - 1) {
-        cumulativeMs += (haversineMeters(point, plainPath[i + 1]!) / walkingSpeedMs) * 1000;
-      }
     });
   }, []);
 
@@ -751,8 +767,8 @@ interface NavigationTestWindow {
           isSimulating={isSimulating}
           carpark={carparkLocation}
           destination={destinationLocation}
-          drivingPath={isSheetVisible ? (remainingPath ?? activeDrivingRoute?.path) : undefined}
-          walkingPath={isSheetVisible ? walkingInfo?.path : undefined}
+          drivingPath={isSheetVisible && !drivingComplete ? (remainingDrivingPath ?? activeDrivingRoute?.path) : undefined}
+          walkingPath={isSheetVisible ? (remainingWalkingPath ?? walkingInfo?.path) : undefined}
           isLocating={isLocating}
           isSheetCollapsed={isSheetCollapsed}
           isSheetVisible={isSheetVisible}
@@ -813,7 +829,15 @@ interface NavigationTestWindow {
             origin={originLocation}
             carpark={carparkLocation}
             destination={destinationLocation}
-            drivingRoutes={drivingRoutes}
+            drivingRoutes={
+              isSimulating && simulatedRemainingMinutes !== null
+                ? drivingRoutes.map((r, i) =>
+                    i === activeRouteIndex
+                      ? { ...r, durationMinutes: simulatedRemainingMinutes }
+                      : r,
+                  )
+                : drivingRoutes
+            }
             activeRouteIndex={activeRouteIndex}
             onSelectRoute={setActiveRouteIndex}
             walkingInfo={walkingInfo}
@@ -828,7 +852,7 @@ interface NavigationTestWindow {
 
 
 
-      {/*arrival popup*/}
+      {/*arrived at carpark popup*/}
       {hasArrived && (
         <div style={{
           position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
@@ -839,7 +863,6 @@ interface NavigationTestWindow {
             background: '#fff', borderRadius: 20, padding: '28px 24px', margin: '0 20px',
             boxShadow: '0 8px 32px rgba(0,0,0,0.18)', textAlign: 'center', width: '100%', maxWidth: 320,
           }}>
-            <div style={{ fontSize: 40, marginBottom: 8 }}>🎉</div>
             <div style={{ fontSize: 18, fontWeight: 700, color: '#111827', marginBottom: 4 }}>
               You have arrived!
             </div>
@@ -884,6 +907,43 @@ interface NavigationTestWindow {
                 Dismiss
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/*arrived at destination popup*/}
+      {arrivedAtDestination && (
+        <div style={{
+          position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
+          justifyContent: 'center', zIndex: 200,
+          background: 'rgba(0,0,0,0.45)',
+        }}>
+          <div style={{
+            background: '#fff', borderRadius: 20, padding: '28px 24px', margin: '0 20px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.18)', textAlign: 'center', width: '100%', maxWidth: 320,
+          }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: '#111827', marginBottom: 4 }}>
+              You have arrived!
+            </div>
+            <div style={{ fontSize: 14, color: '#6B7280', marginBottom: 20 }}>
+              {destinationLocation.name}
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setArrivedAtDestination(false);
+                setDrivingComplete(false);
+                setRemainingDrivingPath(null);
+                setRemainingWalkingPath(null);
+                handleCancelNavigation();
+              }}
+              style={{
+                width: '100%', padding: '12px', borderRadius: 12, border: '1.5px solid #E5E7EB',
+                cursor: 'pointer', background: '#fff', color: '#374151', fontWeight: 600, fontSize: 15,
+              }}
+            >
+              Dismiss
+            </button>
           </div>
         </div>
       )}

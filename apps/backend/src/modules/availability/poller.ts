@@ -1,19 +1,20 @@
 import { fetchCarparkAvailability } from "./api.js";
-import { replaceAvailabilityCache } from "./cache.js";
-import {
-  checkAvailabilityAlerts,
-  type SendAvailabilityNotification,
-} from "./alerts.service.js";
+import type { AvailabilityRepository } from "./repository.js";
 import { createAvailabilityFetcher, type LtaSourceOptions } from "./sources.js";
 
 const POLL_INTERVAL_MS = 60 * 1000;
 
+export interface AvailabilityPollerOptions {
+  lta?: LtaSourceOptions;
+  checkAlerts?: () => Promise<void>;
+}
+
 export function startAvailabilityPoller(
-  sendNotification?: SendAvailabilityNotification,
-  lta?: LtaSourceOptions,
+  repository: Pick<AvailabilityRepository, "saveAvailabilityRecords">,
+  options: AvailabilityPollerOptions = {},
 ): () => void {
-  const fetchLatest = lta
-    ? createAvailabilityFetcher(lta)
+  const fetchLatest = options.lta
+    ? createAvailabilityFetcher(options.lta)
     : fetchCarparkAvailability;
 
   let running = false;
@@ -25,15 +26,15 @@ export function startAvailabilityPoller(
     running = true;
 
     try {
-      const latestData = await fetchLatest();
+      const records = await fetchLatest();
 
       if (stopped) return;
 
-      replaceAvailabilityCache(latestData);
+      await repository.saveAvailabilityRecords(records);
 
-      if (sendNotification) {
-        await checkAvailabilityAlerts(sendNotification);
-      }
+      if (stopped) return;
+
+      await options.checkAlerts?.();
     } catch (error) {
       console.error("Failed to refresh carpark availability:", error);
     } finally {

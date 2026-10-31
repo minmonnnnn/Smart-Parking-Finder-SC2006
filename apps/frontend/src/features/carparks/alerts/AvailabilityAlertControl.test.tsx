@@ -8,19 +8,26 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AvailabilityAlertControl } from "./AvailabilityAlertControl";
 import { createAvailabilityAlert, updateAvailabilityAlert } from "./api";
+import { AvailabilityAlertsProvider } from "./AvailabilityAlertsProvider";
 
 vi.mock("./api", () => ({
   createAvailabilityAlert: vi.fn(),
   updateAvailabilityAlert: vi.fn(),
 }));
 
+vi.mock("./AvailabilityAlertMonitor", () => ({
+  AvailabilityAlertMonitor: () => null,
+}));
+
 function renderControl() {
   return render(
-    <AvailabilityAlertControl
-      carParkNo="AK19"
-      userId="user-1"
-      accessToken="test-token"
-    />,
+    <AvailabilityAlertsProvider userId="user-1" accessToken="test-token">
+      <AvailabilityAlertControl
+        carParkNo="AK19"
+        userId="user-1"
+        accessToken="test-token"
+      />
+    </AvailabilityAlertsProvider>,
   );
 }
 
@@ -49,11 +56,13 @@ describe("AvailabilityAlertControl", () => {
 
   it("requires sign-in", () => {
     render(
-      <AvailabilityAlertControl
-        carParkNo="AK19"
-        userId={null}
-        accessToken={null}
-      />,
+      <AvailabilityAlertsProvider userId={null} accessToken={null}>
+        <AvailabilityAlertControl
+          carParkNo="AK19"
+          userId={null}
+          accessToken={null}
+        />
+      </AvailabilityAlertsProvider>,
     );
 
     expect(

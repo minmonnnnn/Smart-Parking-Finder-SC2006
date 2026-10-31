@@ -503,28 +503,6 @@ export function SearchBar({
         >
           <div style={{ position: 'relative', flex: 1 }}>
             <FilterPill
-              label="Carpark Pricing"
-              active={pricingAsc}
-              expanded={openDropdown === 'pricing'}
-              onClick={() => toggleDropdown('pricing')}
-            />
-            {openDropdown === 'pricing' && (
-              <DropdownMenu>
-                <DropdownItem
-                  selected={pricingAsc}
-                  onClick={() => {
-                    onPricingAsc(!pricingAsc);
-                    setOpenDropdown(null);
-                  }}
-                >
-                  Lowest to Highest
-                </DropdownItem>
-              </DropdownMenu>
-            )}
-          </div>
-
-          <div style={{ position: 'relative', flex: 1 }}>
-            <FilterPill
               label="EV Charger"
               active={evFilter !== null}
               expanded={openDropdown === 'ev'}
@@ -608,8 +586,7 @@ export function SearchBar({
 
       {/* Clear Filters — shown below chips when any filter is active */}
       {filtersOpen &&
-        (pricingAsc ||
-          evFilter !== null ||
+        (evFilter !== null ||
           shelteredFilter !== null ||
           availabilityDesc) && (
           <button

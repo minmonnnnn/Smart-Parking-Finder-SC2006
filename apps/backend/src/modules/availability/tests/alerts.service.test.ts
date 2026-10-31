@@ -2,37 +2,40 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   checkAvailabilityAlerts,
   hasSignificantAvailabilityChange,
+  type AlertCheckDependencies,
   type SendAvailabilityNotification,
 } from "../alerts.service.js";
-import {
-  getEnabledAlerts,
-  updateAlertLastKnownStatus,
-  type AvailabilityAlert,
+import type {
+  AlertRepository,
+  StoredAvailabilityAlert,
 } from "../alerts.repository.js";
-import { getAvailabilityByCarParkNo } from "../repository.js";
+import type { AvailabilityRepository } from "../repository.js";
 import type { AvailabilityInfo } from "../service.js";
 
-vi.mock("../alerts.repository.js", () => ({
-  getEnabledAlerts: vi.fn(),
-  updateAlertLastKnownStatus: vi.fn(),
-}));
-
-vi.mock("../repository.js", () => ({
-  getAvailabilityByCarParkNo: vi.fn(),
-}));
-
 describe("availability alert checks", () => {
-  let alert: AvailabilityAlert;
+  let alert: StoredAvailabilityAlert;
 
+  const getEnabledAlerts = vi.fn<AlertRepository["getEnabledAlerts"]>();
+  const updateAlertLastKnownStatus =
+    vi.fn<AlertRepository["updateAlertLastKnownStatus"]>();
+  const getAvailabilityByCarParkNo =
+    vi.fn<AvailabilityRepository["getAvailabilityByCarParkNo"]>();
   const sendNotification = vi.fn<SendAvailabilityNotification>();
 
+  const dependencies: AlertCheckDependencies = {
+    alerts: { getEnabledAlerts, updateAlertLastKnownStatus },
+    availability: { getAvailabilityByCarParkNo },
+  };
+
   const availability: AvailabilityInfo = {
-    availableLots: 30,
+    availableLots: 20,
     totalLots: 100,
     status: "Moderate",
-    lastUpdated: "2026-10-05T02:00:00Z",
+    lastUpdated: "2026-10-17T02:00:00.000Z",
     isStale: false,
   };
+
+  const check = () => checkAvailabilityAlerts(sendNotification, dependencies);
 
   beforeEach(() => {
     vi.resetAllMocks();
@@ -45,17 +48,15 @@ describe("availability alert checks", () => {
       lastKnownStatus: "High",
     };
 
-    vi.mocked(getEnabledAlerts).mockReturnValue([alert]);
+    getEnabledAlerts.mockImplementation(async () => [{ ...alert }]);
+    getAvailabilityByCarParkNo.mockResolvedValue(availability);
 
-    vi.mocked(getAvailabilityByCarParkNo).mockReturnValue(availability);
-
-    vi.mocked(updateAlertLastKnownStatus).mockImplementation((_id, status) => {
-      alert.lastKnownStatus = status;
-      return alert;
+    updateAlertLastKnownStatus.mockImplementation(async (id, status) => {
+      if (id === alert.id) alert.lastKnownStatus = status;
+      return { ...alert, id, lastKnownStatus: status };
     });
 
     sendNotification.mockResolvedValue(undefined);
-
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
@@ -72,8 +73,9 @@ describe("availability alert checks", () => {
   });
 
   it("notifies the owner and updates the baseline", async () => {
-    await checkAvailabilityAlerts(sendNotification);
+    await check();
 
+    expect(getAvailabilityByCarParkNo).toHaveBeenCalledWith("AK19");
     expect(sendNotification).toHaveBeenCalledExactlyOnceWith({
       alertId: 1,
       userId: "user-1",
@@ -81,97 +83,145 @@ describe("availability alert checks", () => {
       previousStatus: "High",
       currentStatus: "Moderate",
     });
-
     expect(updateAlertLastKnownStatus).toHaveBeenCalledWith(1, "Moderate");
   });
 
   it("does not notify when the tier is unchanged", async () => {
     alert.lastKnownStatus = "Moderate";
 
-    await checkAvailabilityAlerts(sendNotification);
+    await check();
 
     expect(sendNotification).not.toHaveBeenCalled();
     expect(updateAlertLastKnownStatus).not.toHaveBeenCalled();
   });
 
-  it("does not repeat a successfully delivered change", async () => {
-    await checkAvailabilityAlerts(sendNotification);
-    await checkAvailabilityAlerts(sendNotification);
+  it("does not repeat a successfully saved change", async () => {
+    await check();
+    await check();
 
     expect(sendNotification).toHaveBeenCalledTimes(1);
+    expect(updateAlertLastKnownStatus).toHaveBeenCalledTimes(1);
   });
 
-  it("does not notify when there are no enabled alerts", async () => {
-    vi.mocked(getEnabledAlerts).mockReturnValue([]);
+  it("does nothing when there are no enabled alerts", async () => {
+    getEnabledAlerts.mockResolvedValue([]);
 
-    await checkAvailabilityAlerts(sendNotification);
+    await check();
 
-    expect(sendNotification).not.toHaveBeenCalled();
     expect(getAvailabilityByCarParkNo).not.toHaveBeenCalled();
+    expect(sendNotification).not.toHaveBeenCalled();
+  });
+
+  it("skips disabled alerts", async () => {
+    alert.enabled = false;
+
+    await check();
+
+    expect(getAvailabilityByCarParkNo).not.toHaveBeenCalled();
+    expect(sendNotification).not.toHaveBeenCalled();
   });
 
   it("skips missing availability", async () => {
-    vi.mocked(getAvailabilityByCarParkNo).mockReturnValue(null);
+    getAvailabilityByCarParkNo.mockResolvedValue(null);
 
-    await checkAvailabilityAlerts(sendNotification);
+    await check();
 
     expect(sendNotification).not.toHaveBeenCalled();
     expect(updateAlertLastKnownStatus).not.toHaveBeenCalled();
   });
 
   it("skips stale availability", async () => {
-    vi.mocked(getAvailabilityByCarParkNo).mockReturnValue({
+    getAvailabilityByCarParkNo.mockResolvedValue({
       ...availability,
       isStale: true,
     });
 
-    await checkAvailabilityAlerts(sendNotification);
+    await check();
 
     expect(sendNotification).not.toHaveBeenCalled();
     expect(updateAlertLastKnownStatus).not.toHaveBeenCalled();
   });
 
-  it("retries a change after delivery fails", async () => {
-    sendNotification
-      .mockRejectedValueOnce(new Error("Delivery failed"))
-      .mockResolvedValueOnce(undefined);
+  it("initializes a missing baseline without notifying", async () => {
+    alert.lastKnownStatus = null;
 
-    await checkAvailabilityAlerts(sendNotification);
+    await check();
+
+    expect(sendNotification).not.toHaveBeenCalled();
+    expect(updateAlertLastKnownStatus).toHaveBeenCalledWith(1, "Moderate");
+  });
+
+  it("retries after delivery fails", async () => {
+    sendNotification.mockRejectedValueOnce(new Error("Delivery failed"));
+
+    await check();
 
     expect(updateAlertLastKnownStatus).not.toHaveBeenCalled();
     expect(alert.lastKnownStatus).toBe("High");
 
-    await checkAvailabilityAlerts(sendNotification);
+    await check();
 
     expect(sendNotification).toHaveBeenCalledTimes(2);
     expect(alert.lastKnownStatus).toBe("Moderate");
   });
 
-  it("continues processing after another delivery fails", async () => {
-    vi.mocked(getEnabledAlerts).mockReturnValue([
-      alert,
-      {
-        ...alert,
-        id: 2,
-        userId: "user-2",
-        carParkNo: "BK25",
-      },
+  it("continues after another delivery fails", async () => {
+    getEnabledAlerts.mockResolvedValue([
+      { ...alert },
+      { ...alert, id: 2, userId: "user-2", carParkNo: "BK25" },
     ]);
-
     sendNotification.mockRejectedValueOnce(new Error("Delivery failed"));
 
-    await checkAvailabilityAlerts(sendNotification);
+    await check();
 
     expect(sendNotification).toHaveBeenCalledTimes(2);
-    expect(sendNotification).toHaveBeenNthCalledWith(2, {
-      alertId: 2,
-      userId: "user-2",
-      carParkNo: "BK25",
-      previousStatus: "High",
-      currentStatus: "Moderate",
-    });
+    expect(sendNotification).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ alertId: 2, userId: "user-2" }),
+    );
+    expect(updateAlertLastKnownStatus).toHaveBeenCalledExactlyOnceWith(
+      2,
+      "Moderate",
+    );
+  });
 
-    expect(updateAlertLastKnownStatus).toHaveBeenCalledTimes(1);
-    expect(updateAlertLastKnownStatus).toHaveBeenCalledWith(2, "Moderate");
+  it("continues after an availability lookup fails", async () => {
+    getEnabledAlerts.mockResolvedValue([
+      { ...alert },
+      { ...alert, id: 2, carParkNo: "BK25" },
+    ]);
+    getAvailabilityByCarParkNo.mockRejectedValueOnce(
+      new Error("Database unavailable"),
+    );
+
+    await check();
+
+    expect(sendNotification).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ alertId: 2 }),
+    );
+  });
+
+  it("reports failure to load enabled alerts", async () => {
+    const error = new Error("Database unavailable");
+    getEnabledAlerts.mockRejectedValue(error);
+
+    await expect(check()).rejects.toBe(error);
+    expect(sendNotification).not.toHaveBeenCalled();
+  });
+
+  it("keeps the old baseline when saving it fails", async () => {
+    updateAlertLastKnownStatus.mockRejectedValueOnce(
+      new Error("Database unavailable"),
+    );
+
+    await check();
+
+    expect(sendNotification).toHaveBeenCalledTimes(1);
+    expect(alert.lastKnownStatus).toBe("High");
+
+    await check();
+
+    expect(sendNotification).toHaveBeenCalledTimes(2);
+    expect(alert.lastKnownStatus).toBe("Moderate");
   });
 });

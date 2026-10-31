@@ -1,4 +1,4 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type {
   Carpark,
   CarparkFilters,
@@ -8,22 +8,34 @@ import type {
   AvailabilityInfo,
   CarparkDataService,
   CarparkDetails,
-} from '@smart-parking/shared-types';
-import { getCarparksNearby, getCarparkByNo } from './carpark.repository.js';
-import { getAvailabilityByCarParkNo } from '../availability/repository.js';
-import { getDrivingRoute, getWalkingRoute, calculateDistanceKm } from '../routing/routing.service.js';
-import { rankCarparks, type RecommendationCandidate } from '../recommendation/rank-carparks.js';
-import { getHistoricalAvailabilityRatio } from '../recommendation/historical-availability.js';
-import { getWeather } from '../weather/weather.service.js';
+} from "@smart-parking/shared-types";
+import { getCarparksNearby, getCarparkByNo } from "./carpark.repository.js";
+import {
+  createAvailabilityRepository,
+  getAvailabilityForCarparks,
+} from "../availability/repository.js";
+import {
+  getDrivingRoute,
+  getWalkingRoute,
+  calculateDistanceKm,
+} from "../routing/routing.service.js";
+import { rankCarparks, type RecommendationCandidate } from "../recommendation/rank-carparks.js";
+import { getHistoricalAvailabilityRatio } from "../recommendation/historical-availability.js";
+import { getWeather } from "../weather/weather.service.js";
 
-const AVAILABILITY_STATUS_RANK = { High: 3, Moderate: 2, Low: 1, Unavailable: 0 } as const;
+const AVAILABILITY_STATUS_RANK = {
+  High: 3,
+  Moderate: 2,
+  Low: 1,
+  Unavailable: 0,
+} as const;
 
 /** Returns a zero-lot availability record used when the cache has no data for a carpark. */
 function fallbackAvailability(): AvailabilityInfo {
   return {
     availableLots: 0,
     totalLots: 0,
-    status: 'Unavailable',
+    status: "Unavailable",
     lastUpdated: new Date().toISOString(),
     isStale: true,
   };
@@ -37,7 +49,12 @@ function passesFilters(
 ): boolean {
   if (filters.evChargingOnly && !carpark.hasEvCharging) return false;
   if (filters.shelteredOnly && !carpark.isSheltered) return false;
-  if (filters.maxCost !== undefined && carpark.parkingCost !== null && carpark.parkingCost > filters.maxCost) return false;
+  if (
+    filters.maxCost !== undefined &&
+    carpark.parkingCost !== null &&
+    carpark.parkingCost > filters.maxCost
+  )
+    return false;
   if (filters.minAvailability) {
     const required = AVAILABILITY_STATUS_RANK[filters.minAvailability];
     const actual = AVAILABILITY_STATUS_RANK[availability.status];
@@ -74,7 +91,7 @@ export async function getNearbyCarparks(
     destinationLng,
     originLat,
     originLng,
-    sort = 'distance',
+    sort = "distance",
     filters = {},
   } = input;
 
@@ -85,40 +102,59 @@ export async function getNearbyCarparks(
     const weather = await getWeather(destinationLat, destinationLng);
     rainExpected = weather.rainExpected;
   } catch {
-    degradedServices.push('weather');
+    degradedServices.push("weather");
   }
 
   let carparks: Carpark[];
   try {
     carparks = await getCarparksNearby(client, destinationLat, destinationLng);
   } catch {
-    throw new Error('EXTERNAL_SERVICE_UNAVAILABLE');
+    throw new Error("EXTERNAL_SERVICE_UNAVAILABLE");
   }
 
   if (carparks.length === 0) {
     return { carparks: [], degradedServices };
   }
 
+  let availabilityByCarParkNo: Map<string, AvailabilityInfo>;
+
+  try {
+    availabilityByCarParkNo = await getAvailabilityForCarparks(
+      client,
+      carparks.map((carpark) => carpark.carParkNo),
+    );
+  } catch {
+    availabilityByCarParkNo = new Map();
+
+    if (!degradedServices.includes("availability")) {
+      degradedServices.push("availability");
+    }
+  }
+
   const filteredCandidates = carparks
     .map((carpark) => {
       let availability: AvailabilityInfo;
       try {
-        const cached = getAvailabilityByCarParkNo(carpark.carParkNo);
+        const cached = availabilityByCarParkNo.get(carpark.carParkNo);
         availability = cached ?? fallbackAvailability();
-        if (!cached && !degradedServices.includes('availability')) {
-          degradedServices.push('availability');
+        if (!cached && !degradedServices.includes("availability")) {
+          degradedServices.push("availability");
         }
       } catch {
-        if (!degradedServices.includes('availability')) degradedServices.push('availability');
+        if (!degradedServices.includes("availability"))
+          degradedServices.push("availability");
         availability = fallbackAvailability();
       }
 
       if (!passesFilters(carpark, availability, filters)) return null;
-      if (sort === 'recommended' && availability.availableLots <= 0) return null;
+      if (sort === "recommended" && availability.availableLots <= 0)
+        return null;
 
       const walkingDistanceKm = calculateDistanceKm(
-        carpark.latitude, carpark.longitude,
-        destinationLat, destinationLng,
+        carpark.latitude,
+        carpark.longitude,
+        destinationLat,
+        destinationLng,
       );
       const walkingDistanceMeters = Math.round(walkingDistanceKm * 1000);
 
@@ -134,7 +170,9 @@ export async function getNearbyCarparks(
     return { carparks: [], degradedServices };
   }
 
-  filteredCandidates.sort((a, b) => a.walkingDistanceMeters - b.walkingDistanceMeters);
+  filteredCandidates.sort(
+    (a, b) => a.walkingDistanceMeters - b.walkingDistanceMeters,
+  );
 
   const MAX_CANDIDATES = 10;
   const topCandidates = filteredCandidates.slice(0, MAX_CANDIDATES);
@@ -216,6 +254,10 @@ export async function getNearbyCarparks(
       .sort((a, b) => a.distanceMeters - b.distanceMeters);
   }
 
+  if (originLat === undefined || originLng === undefined) {
+    ranked = ranked.map((r) => ({ ...r, drivingEtaMinutes: null }));
+  }
+
   return { carparks: ranked, degradedServices };
 }
 
@@ -232,14 +274,19 @@ export async function getCarparkDetails(
   const carpark = await getCarparkByNo(client, carParkNo);
   if (!carpark) return null;
 
-  const cached = getAvailabilityByCarParkNo(carpark.carParkNo);
-  const availability = cached ?? {
-    availableLots: 0,
-    totalLots: 0,
-    status: 'Unavailable' as const,
-    lastUpdated: new Date().toISOString(),
-    isStale: true,
-  };
+  try {
+    const availability = await createAvailabilityRepository(
+      client,
+    ).getAvailabilityByCarParkNo(carpark.carParkNo);
 
-  return { carpark, availability };
+    return {
+      carpark,
+      availability: availability ?? fallbackAvailability(),
+    };
+  } catch {
+    return {
+      carpark,
+      availability: fallbackAvailability(),
+    };
+  }
 }

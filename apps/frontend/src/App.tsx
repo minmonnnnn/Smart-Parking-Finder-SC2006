@@ -45,7 +45,7 @@ function AppShell() {
       case 'sign-in':
         return (
           <SignInPage
-            onSignedIn={() => navigate('profile')}
+            onSignedIn={() => navigate('navigation')}
             onSwitchMode={() => navigate('sign-up')}
           />
         )
@@ -147,14 +147,6 @@ function AppShell() {
     <div className="app-shell">
       {session && (
         <nav className="app-navigation" aria-label="Account navigation">
-          <button
-            type="button"
-            aria-current={activePage === 'search' ? 'page' : undefined}
-            onClick={() => navigate('search')}
-          >
-            Search
-          </button>
-
           <button
             type="button"
             aria-current={activePage === 'profile' ? 'page' : undefined}

@@ -4,7 +4,6 @@ import { CrosshairIcon, MapPinIcon } from '../../components/icons';
 import type { PlaceItem } from '../navigation/types';
 
 export type YesNo = 'yes' | 'no';
-export type AvailabilityLevel = 'high' | 'moderate' | 'low';
 
 export interface SearchBarProps {
   query: string;
@@ -16,8 +15,8 @@ export interface SearchBarProps {
   onShelteredFilter: (v: YesNo | null) => void;
   pricingAsc: boolean;
   onPricingAsc: (v: boolean) => void;
-  availabilityFilter: Set<AvailabilityLevel>;
-  onAvailabilityFilter: (level: AvailabilityLevel) => void;
+  availabilityDesc: boolean;
+  onAvailabilityDesc: (v: boolean) => void;
   onClearFilters: () => void;
   placeholder?: string;
   suggestions?: PlaceItem[];
@@ -237,8 +236,8 @@ export function SearchBar({
   onShelteredFilter,
   pricingAsc,
   onPricingAsc,
-  availabilityFilter,
-  onAvailabilityFilter,
+  availabilityDesc,
+  onAvailabilityDesc,
   onClearFilters,
   placeholder = 'Search...',
   suggestions,
@@ -589,22 +588,18 @@ export function SearchBar({
           <div style={{ position: 'relative', flex: 1 }}>
             <FilterPill
               label="Availability"
-              active={availabilityFilter.size > 0}
+              active={availabilityDesc}
               expanded={openDropdown === 'availability'}
               onClick={() => toggleDropdown('availability')}
             />
             {openDropdown === 'availability' && (
               <DropdownMenu>
-                {(['high', 'moderate', 'low'] as AvailabilityLevel[]).map((level) => (
-                  <DropdownItem
-                    key={level}
-                    selected={availabilityFilter.has(level)}
-                    onClick={() => onAvailabilityFilter(level)}
-                    multi
-                  >
-                    {level.charAt(0).toUpperCase() + level.slice(1)}
-                  </DropdownItem>
-                ))}
+                <DropdownItem
+                  selected={availabilityDesc}
+                  onClick={() => { onAvailabilityDesc(!availabilityDesc); setOpenDropdown(null); }}
+                >
+                  Highest to Lowest
+                </DropdownItem>
               </DropdownMenu>
             )}
           </div>
@@ -616,7 +611,7 @@ export function SearchBar({
         (pricingAsc ||
           evFilter !== null ||
           shelteredFilter !== null ||
-          availabilityFilter.size > 0) && (
+          availabilityDesc) && (
           <button
             type="button"
             onClick={() => {

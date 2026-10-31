@@ -13,13 +13,6 @@ import {
 } from "./searchApi";
 
 type YesNo = "yes" | "no";
-type AvailabilityLevel = "high" | "moderate" | "low";
-
-/** Derives a three-tier availability level from lot counts. */
-function availabilityLevel(available: number, total: number): AvailabilityLevel {
-  const pct = progressPercent(available, total);
-  return pct >= 30 ? "high" : pct >= 10 ? "moderate" : "low";
-}
 
 const navigateIcon = (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -226,7 +219,7 @@ function DegradedBanner({ services }: { services: CarparkDataService[] }) {
 function SearchBar({
   query, onChange, onSearch, onSelectSuggestion, suggestions, showSuggestions,
   evFilter, onEvFilter, shelteredFilter, onShelteredFilter, pricingAsc, onPricingAsc,
-  availabilityFilter, onAvailabilityFilter, onClearFilters,
+  availabilityDesc, onAvailabilityDesc, onClearFilters,
 }: {
   query: string;
   onChange: (v: string) => void;
@@ -240,8 +233,8 @@ function SearchBar({
   onShelteredFilter: (v: YesNo | null) => void;
   pricingAsc: boolean;
   onPricingAsc: (v: boolean) => void;
-  availabilityFilter: Set<AvailabilityLevel>;
-  onAvailabilityFilter: (level: AvailabilityLevel) => void;
+  availabilityDesc: boolean;
+  onAvailabilityDesc: (v: boolean) => void;
   onClearFilters: () => void;
 }) {
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -353,21 +346,19 @@ function SearchBar({
           </div>
 
           <div style={{ position: "relative", flex: 1 }}>
-            <FilterPill label="Availability" active={availabilityFilter.size > 0} expanded={openDropdown === "availability"} onClick={() => toggleDropdown("availability")} />
+            <FilterPill label="Availability" active={availabilityDesc} expanded={openDropdown === "availability"} onClick={() => toggleDropdown("availability")} />
             {openDropdown === "availability" && (
               <DropdownMenu>
-                {(["high", "moderate", "low"] as AvailabilityLevel[]).map((level) => (
-                  <DropdownItem key={level} selected={availabilityFilter.has(level)} onClick={() => onAvailabilityFilter(level)} multi>
-                    {level.charAt(0).toUpperCase() + level.slice(1)}
-                  </DropdownItem>
-                ))}
+                <DropdownItem selected={availabilityDesc} onClick={() => { onAvailabilityDesc(!availabilityDesc); setOpenDropdown(null); }}>
+                  Highest to Lowest
+                </DropdownItem>
               </DropdownMenu>
             )}
           </div>
         </div>
       )}
 
-      {filtersOpen && (pricingAsc || evFilter !== null || shelteredFilter !== null || availabilityFilter.size > 0) && (
+      {filtersOpen && (pricingAsc || evFilter !== null || shelteredFilter !== null || availabilityDesc) && (
         <button onClick={() => { onClearFilters(); setOpenDropdown(null); }} style={{
           display: "block", margin: `${vars.space[1]} 0 0`, background: "none", border: "none",
           cursor: "pointer", fontSize: vars.fontSize.xs, color: vars.color.secondary,
@@ -416,7 +407,7 @@ export default function SearchPage({
   const [evFilter, setEvFilter] = useState<YesNo | null>(null);
   const [shelteredFilter, setShelteredFilter] = useState<YesNo | null>(null);
   const [pricingAsc, setPricingAsc] = useState(false);
-  const [availabilityFilter, setAvailabilityFilter] = useState<Set<AvailabilityLevel>>(new Set());
+  const [availabilityDesc, setAvailabilityDesc] = useState(false);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -522,42 +513,33 @@ export default function SearchPage({
     }
   }
 
-  function toggleAvailability(level: AvailabilityLevel) {
-    setAvailabilityFilter((prev) => {
-      const next = new Set(prev);
-      if (next.has(level)) next.delete(level); else next.add(level);
-      return next;
-    });
-  }
-
   function clearFilters() {
     setPricingAsc(false);
     setEvFilter(null);
     setShelteredFilter(null);
-    setAvailabilityFilter(new Set());
+    setAvailabilityDesc(false);
   }
 
   const results = carparks
     .filter((r) => evFilter === null || (evFilter === "yes" ? r.carpark.hasEvCharging : !r.carpark.hasEvCharging))
     .filter((r) => shelteredFilter === null || (shelteredFilter === "yes" ? r.carpark.isSheltered : !r.carpark.isSheltered))
-    .filter((r) => {
-      if (availabilityFilter.size === 0) return true;
-      const level = availabilityLevel(r.availability.availableLots, r.availability.totalLots);
-      return availabilityFilter.has(level);
-    })
     .filter((r) => r.availability.availableLots > 0)
     .slice()
-    .sort((a, b) =>
-      pricingAsc
-        ? ((a.carpark.parkingCost ?? 0.6) - (b.carpark.parkingCost ?? 0.6) || a.distanceMeters - b.distanceMeters)
-        : (b.recommendationScore ?? 0) - (a.recommendationScore ?? 0) || a.distanceMeters - b.distanceMeters,
-    );
+    .sort((a, b) => {
+      if (availabilityDesc) {
+        return b.availability.availableLots - a.availability.availableLots || a.distanceMeters - b.distanceMeters;
+      }
+      if (pricingAsc) {
+        return (a.carpark.parkingCost ?? 0.6) - (b.carpark.parkingCost ?? 0.6) || a.distanceMeters - b.distanceMeters;
+      }
+      return (b.recommendationScore ?? 0) - (a.recommendationScore ?? 0) || a.distanceMeters - b.distanceMeters;
+    });
 
   const filterProps = {
     evFilter, onEvFilter: setEvFilter,
     shelteredFilter, onShelteredFilter: setShelteredFilter,
     pricingAsc, onPricingAsc: setPricingAsc,
-    availabilityFilter, onAvailabilityFilter: toggleAvailability,
+    availabilityDesc, onAvailabilityDesc: setAvailabilityDesc,
     onClearFilters: clearFilters,
   };
 

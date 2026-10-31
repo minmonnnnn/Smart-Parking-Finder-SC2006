@@ -1,6 +1,7 @@
 import { vars } from "../../../components";
 import { AvailabilityAlertToggle } from "./AvailabilityAlertToggle";
 import { useAvailabilityAlerts } from "./AvailabilityAlertsProvider";
+import type { AvailabilityTestWindow } from "./AvailabilityAlertMonitor";
 
 interface AvailabilityAlertControlProps {
   carParkNo: string;
@@ -68,6 +69,30 @@ export function AvailabilityAlertControl({
           }}
         />
       </fieldset>
+
+      {enabled && (
+        <div style={{ marginTop: vars.space[2] }}>
+          <button
+            type="button"
+            onClick={() => {
+              const testWindow = window as unknown as AvailabilityTestWindow;
+              testWindow.__simulateAvailabilityAlert?.({ carParkNo });
+            }}
+            style={{
+              padding: `${vars.space[1]} ${vars.space[2]}`,
+              fontSize: vars.fontSize.xs,
+              color: vars.color.secondary,
+              background: "transparent",
+              border: `1px dashed ${vars.color.secondary}`,
+              borderRadius: vars.radius.sm,
+              cursor: "pointer",
+              fontWeight: vars.fontWeight.medium,
+            }}
+          >
+            ⚡ Simulate Availability Alert
+          </button>
+        </div>
+      )}
 
       {pending && (
         <p

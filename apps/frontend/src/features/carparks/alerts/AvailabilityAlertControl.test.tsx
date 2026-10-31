@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AvailabilityAlertControl } from "./AvailabilityAlertControl";
 import { createAvailabilityAlert, updateAvailabilityAlert } from "./api";
 import { AvailabilityAlertsProvider } from "./AvailabilityAlertsProvider";
+import type { AvailabilityTestWindow } from "./AvailabilityAlertMonitor";
 
 vi.mock("./api", () => ({
   createAvailabilityAlert: vi.fn(),
@@ -83,6 +84,32 @@ describe("AvailabilityAlertControl", () => {
     });
 
     expect(createAvailabilityAlert).toHaveBeenCalledWith("AK19", "test-token");
+  });
+
+  it("shows a simulate alert button when enabled and triggers simulation", async () => {
+    renderControl();
+
+    expect(
+      screen.queryByRole("button", { name: /Simulate Availability Alert/i }),
+    ).toBeNull();
+
+    fireEvent.click(checkbox());
+
+    await waitFor(() => {
+      expect(checkbox().checked).toBe(true);
+    });
+
+    const simulateBtn = await screen.findByRole("button", {
+      name: /Simulate Availability Alert/i,
+    });
+    expect(simulateBtn).toBeInTheDocument();
+
+    const testWindow = window as unknown as AvailabilityTestWindow;
+    const simulateSpy = vi.fn();
+    testWindow.__simulateAvailabilityAlert = simulateSpy;
+
+    fireEvent.click(simulateBtn);
+    expect(simulateSpy).toHaveBeenCalledWith({ carParkNo: "AK19" });
   });
 
   it("disables and re-enables the same subscription", async () => {

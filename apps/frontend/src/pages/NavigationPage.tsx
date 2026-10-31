@@ -60,6 +60,7 @@ export function NavigationPage({
     originLocationRef.current = originLocation;
   }, [originLocation]);
   const simulationTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const isSimulatingRef = useRef(false);
   const [carparkLocation, setCarparkLocation] = useState(initialCp);
   const [destinationLocation, setDestinationLocation] =
     useState<NavDestination>(
@@ -112,6 +113,7 @@ export function NavigationPage({
 
     const watchId = navigator.geolocation.watchPosition(
       (position) => {
+        if (isSimulatingRef.current) return;
         const rawLat = position.coords.latitude;
         const rawLng = position.coords.longitude;
         const inSingapore =
@@ -280,6 +282,7 @@ interface NavigationTestWindow {
       // Clear any running simulation
       simulationTimeoutsRef.current.forEach(clearTimeout);
       simulationTimeoutsRef.current = [];
+      isSimulatingRef.current = true;
 
       const speedMs = (speedKmh * 1000) / 3600; // m/s
       let cumulativeMs = 0;
@@ -292,7 +295,10 @@ interface NavigationTestWindow {
         const delay = cumulativeMs;
         const t = setTimeout(() => {
           setOriginLocation({ lat: point.lat, lng: point.lng, name: 'Simulated Location' });
-          if (i === path.length - 1) console.log('[Sim] Simulation complete');
+          if (i === path.length - 1) {
+            isSimulatingRef.current = false;
+            console.log('[Sim] Simulation complete');
+          }
         }, delay);
 
         simulationTimeoutsRef.current.push(t);
@@ -308,6 +314,7 @@ interface NavigationTestWindow {
     (window as unknown as Record<string, unknown>).__stopSimulation = () => {
       simulationTimeoutsRef.current.forEach(clearTimeout);
       simulationTimeoutsRef.current = [];
+      isSimulatingRef.current = false;
       console.log('[Sim] Simulation stopped');
     };
 

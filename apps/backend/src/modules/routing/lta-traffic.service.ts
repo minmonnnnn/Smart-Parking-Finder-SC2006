@@ -57,6 +57,7 @@ export async function getLtaTrafficIncidents(): Promise<LtaTrafficIncident[]> {
 
 /**
  * Checks if any reported traffic incidents are within radiusKm of the route segment / midpoint.
+ * Defaults to 0.8 km corridor radius to avoid distant false-positive escalations on local routes.
  */
 export function hasNearbyIncidents(
   incidents: LtaTrafficIncident[],
@@ -64,7 +65,7 @@ export function hasNearbyIncidents(
   originLng: number,
   destLat: number,
   destLng: number,
-  radiusKm = 2.5
+  radiusKm = 0.8
 ): boolean {
   if (!incidents || incidents.length === 0) return false;
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+﻿import { useCallback, useEffect, useRef, useState } from "react";
 import styles from "./NavigationPage.module.css";
 import { NavigationMap } from "../features/navigation/components/NavigationMap";
 import { NavigationBottomSheet } from "../features/navigation/components/NavigationBottomSheet";
@@ -327,7 +327,7 @@ interface NavigationTestWindow {
     (window as unknown as Record<string, unknown>).__startSimulation = (speedKmh = 50) => {
       const path = activeDrivingRouteRef.current?.path;
       if (!path || path.length < 2) {
-        console.warn('[Sim] No route path available yet — select a destination first');
+        console.warn('[Sim] No route path available yet â€” select a destination first');
         return;
       }
 

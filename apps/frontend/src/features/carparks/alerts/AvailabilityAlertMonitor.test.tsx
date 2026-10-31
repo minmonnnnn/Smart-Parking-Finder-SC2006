@@ -65,7 +65,7 @@ describe("AvailabilityAlertMonitor", () => {
     await tick(60_000);
 
     expect(screen.getByRole("status").textContent).toBe(
-      "AK19 availability changed from High to Moderate. 20 of 100 lots available.",
+      "Navigating carpark availability changed from High to Moderate. 20 of 100 lots available.",
     );
   });
 
@@ -84,7 +84,7 @@ describe("AvailabilityAlertMonitor", () => {
     });
 
     expect(screen.getByRole("status").textContent).toBe(
-      "AK19 availability changed from High to Moderate. 24 of 120 lots available.",
+      "Navigating carpark availability changed from High to Moderate. 24 of 120 lots available.",
     );
 
     // Dismissing clears it
@@ -189,7 +189,7 @@ describe("AvailabilityAlertMonitor", () => {
     await tick();
     await tick(60_000);
 
-    expect(screen.getByRole("status").textContent).toContain("AK19");
+    expect(screen.getByRole("status").textContent).toContain("Navigating carpark");
 
     view.rerender(<AvailabilityAlertMonitor carParkNo="BK25" />);
     await tick();

@@ -930,7 +930,7 @@ interface NavigationTestWindow {
 
 
       {/*arrived at carpark popup*/}
-      {hasArrived && (
+      {hasArrived && carparkLocation && (
         <div style={{
           position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
           justifyContent: 'center', zIndex: 200,
@@ -989,7 +989,7 @@ interface NavigationTestWindow {
       )}
 
       {/*arrived at destination popup*/}
-      {arrivedAtDestination && (
+      {arrivedAtDestination && destinationLocation && (
         <div style={{
           position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
           justifyContent: 'center', zIndex: 200,
@@ -1025,7 +1025,6 @@ interface NavigationTestWindow {
         </div>
       )}
 
-      {/*carkpark details */}
       {/*Carpark Detail Page overlay*/}
       {selectedDetailCarparkNo && (
         <CarparkDetailPage

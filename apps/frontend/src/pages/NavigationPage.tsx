@@ -59,6 +59,7 @@ export function NavigationPage({
   useEffect(() => {
     originLocationRef.current = originLocation;
   }, [originLocation]);
+  const simulationTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const [carparkLocation, setCarparkLocation] = useState(initialCp);
   const [destinationLocation, setDestinationLocation] =
     useState<NavDestination>(
@@ -243,6 +244,79 @@ interface NavigationTestWindow {
     carpark: carparkLocation,
     destination: destinationLocation,
   });
+
+  const activeDrivingRouteRef = useRef(activeDrivingRoute);
+  useEffect(() => {
+    activeDrivingRouteRef.current = activeDrivingRoute;
+  }, [activeDrivingRoute]);
+
+  // Console helpers for demo/testing: simulate marker movement along the route
+  useEffect(() => {
+    function getLatLng(point: { lat: number; lng: number } | google.maps.LatLng) {
+      if (typeof (point as google.maps.LatLng).lat === 'function') {
+        const p = point as google.maps.LatLng;
+        return { lat: p.lat(), lng: p.lng() };
+      }
+      return point as { lat: number; lng: number };
+    }
+
+    function haversineMeters(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
+      const R = 6371000;
+      const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+      const dLng = ((b.lng - a.lng) * Math.PI) / 180;
+      const s =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos((a.lat * Math.PI) / 180) * Math.cos((b.lat * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s));
+    }
+
+    (window as unknown as Record<string, unknown>).__startSimulation = (speedKmh = 50) => {
+      const path = activeDrivingRouteRef.current?.path;
+      if (!path || path.length < 2) {
+        console.warn('[Sim] No route path available yet — select a destination first');
+        return;
+      }
+
+      // Clear any running simulation
+      simulationTimeoutsRef.current.forEach(clearTimeout);
+      simulationTimeoutsRef.current = [];
+
+      const speedMs = (speedKmh * 1000) / 3600; // m/s
+      let cumulativeMs = 0;
+
+      console.log(`[Sim] Starting simulation: ${path.length} points at ${speedKmh} km/h`);
+
+      path.forEach((rawPoint, i) => {
+        const point = getLatLng(rawPoint as { lat: number; lng: number } | google.maps.LatLng);
+
+        const delay = cumulativeMs;
+        const t = setTimeout(() => {
+          setOriginLocation({ lat: point.lat, lng: point.lng, name: 'Simulated Location' });
+          if (i === path.length - 1) console.log('[Sim] Simulation complete');
+        }, delay);
+
+        simulationTimeoutsRef.current.push(t);
+
+        if (i < path.length - 1) {
+          const next = getLatLng((path[i + 1] as { lat: number; lng: number } | google.maps.LatLng));
+          const dist = haversineMeters(point, next);
+          cumulativeMs += (dist / speedMs) * 1000;
+        }
+      });
+    };
+
+    (window as unknown as Record<string, unknown>).__stopSimulation = () => {
+      simulationTimeoutsRef.current.forEach(clearTimeout);
+      simulationTimeoutsRef.current = [];
+      console.log('[Sim] Simulation stopped');
+    };
+
+    return () => {
+      simulationTimeoutsRef.current.forEach(clearTimeout);
+      delete (window as unknown as Record<string, unknown>).__startSimulation;
+      delete (window as unknown as Record<string, unknown>).__stopSimulation;
+    };
+  }, []);
 
   //live weather
   const { weather: liveWeather } = useWeather({

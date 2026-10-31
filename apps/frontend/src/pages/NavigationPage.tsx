@@ -259,6 +259,7 @@ interface NavigationTestWindow {
   }, [walkingInfo]);
 
   const [hasArrived, setHasArrived] = useState(false);
+  const [remainingPath, setRemainingPath] = useState<{ lat: number; lng: number }[] | null>(null);
 
   // Console helpers for demo/testing: simulate marker movement along the route
   useEffect(() => {
@@ -287,17 +288,21 @@ interface NavigationTestWindow {
     ) {
       simulationTimeoutsRef.current.forEach(clearTimeout);
       simulationTimeoutsRef.current = [];
+      const plainPath = path.map((p) => getLatLng(p as { lat: number; lng: number } | google.maps.LatLng));
+      setRemainingPath(plainPath);
       let cumulativeMs = 0;
-      path.forEach((rawPoint, i) => {
-        const point = getLatLng(rawPoint as { lat: number; lng: number } | google.maps.LatLng);
+      plainPath.forEach((point, i) => {
         const t = setTimeout(() => {
           setSimulatedOrigin({ lat: point.lat, lng: point.lng, name: 'Simulated Location' });
-          if (i === path.length - 1) onComplete();
+          setRemainingPath(plainPath.slice(i));
+          if (i === plainPath.length - 1) {
+            setRemainingPath(null);
+            onComplete();
+          }
         }, cumulativeMs);
         simulationTimeoutsRef.current.push(t);
-        if (i < path.length - 1) {
-          const next = getLatLng(path[i + 1] as { lat: number; lng: number } | google.maps.LatLng);
-          cumulativeMs += (haversineMeters(point, next) / speedMs) * 1000;
+        if (i < plainPath.length - 1) {
+          cumulativeMs += (haversineMeters(point, plainPath[i + 1]!) / speedMs) * 1000;
         }
       });
     }
@@ -332,6 +337,7 @@ interface NavigationTestWindow {
       simulationTimeoutsRef.current = [];
       isSimulatingRef.current = false;
       setSimulatedOrigin(null);
+      setRemainingPath(null);
       console.log('[Sim] Simulation stopped');
     };
 
@@ -649,24 +655,26 @@ interface NavigationTestWindow {
       return R * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s));
     }
 
+    const plainPath = path.map((p) => getLatLng(p as { lat: number; lng: number } | google.maps.LatLng));
+    setRemainingPath(plainPath);
     simulationTimeoutsRef.current.forEach(clearTimeout);
     simulationTimeoutsRef.current = [];
     let cumulativeMs = 0;
-    path.forEach((rawPoint, i) => {
-      const point = getLatLng(rawPoint as { lat: number; lng: number } | google.maps.LatLng);
+    plainPath.forEach((point, i) => {
       const t = setTimeout(() => {
         setSimulatedOrigin({ lat: point.lat, lng: point.lng, name: 'Walking' });
-        if (i === path.length - 1) {
+        setRemainingPath(plainPath.slice(i));
+        if (i === plainPath.length - 1) {
           isSimulatingRef.current = false;
           setSimulatedOrigin(null);
+          setRemainingPath(null);
           setHasArrived(true);
           console.log('[Sim] Arrived at destination');
         }
       }, cumulativeMs);
       simulationTimeoutsRef.current.push(t);
-      if (i < path.length - 1) {
-        const next = getLatLng(path[i + 1] as { lat: number; lng: number } | google.maps.LatLng);
-        cumulativeMs += (haversineMeters(point, next) / walkingSpeedMs) * 1000;
+      if (i < plainPath.length - 1) {
+        cumulativeMs += (haversineMeters(point, plainPath[i + 1]!) / walkingSpeedMs) * 1000;
       }
     });
   }, []);
@@ -736,7 +744,7 @@ interface NavigationTestWindow {
           origin={simulatedOrigin ?? originLocation}
           carpark={carparkLocation}
           destination={destinationLocation}
-          drivingPath={isSheetVisible ? activeDrivingRoute?.path : undefined}
+          drivingPath={isSheetVisible ? (remainingPath ?? activeDrivingRoute?.path) : undefined}
           walkingPath={isSheetVisible ? walkingInfo?.path : undefined}
           isLocating={isLocating}
           isSheetCollapsed={isSheetCollapsed}

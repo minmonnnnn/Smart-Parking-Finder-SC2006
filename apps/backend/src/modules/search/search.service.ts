@@ -12,7 +12,7 @@ import type {
 import { getCarparksNearby, getCarparkByNo } from './carpark.repository.js';
 import { getAvailabilityByCarParkNo } from '../availability/repository.js';
 import { getDrivingRoute, getWalkingRoute, calculateDistanceKm } from '../routing/routing.service.js';
-import { calculateRecommendationScore } from '../recommendation/recommendation-score.js';
+import { rankCarparks, type RecommendationCandidate } from '../recommendation/rank-carparks.js';
 import { getHistoricalAvailabilityRatio } from '../recommendation/historical-availability.js';
 import { getWeather } from '../weather/weather.service.js';
 
@@ -143,8 +143,8 @@ export async function getNearbyCarparks(
   const arrivalDayOfWeek = now.getDay();
   const arrivalHour = now.getHours();
 
-  const enriched = await Promise.all(
-    topCandidates.map(async ({ carpark, availability, walkingDistanceMeters }): Promise<RankedCarpark> => {
+  const candidates: RecommendationCandidate[] = await Promise.all(
+    topCandidates.map(async ({ carpark, availability, walkingDistanceMeters }): Promise<RecommendationCandidate> => {
       let walkingEtaMinutes = Math.max(1, Math.round(walkingDistanceMeters / 75));
       try {
         const walkRoute = await getWalkingRoute(
@@ -177,45 +177,46 @@ export async function getNearbyCarparks(
         if (!degradedServices.includes('historical')) degradedServices.push('historical');
       }
 
-      let recommendationScore = 0;
-      const realTimeRatio =
-        availability.totalLots > 0
-          ? availability.availableLots / availability.totalLots
-          : null;
-      try {
-        if (realTimeRatio !== null) {
-          const result = calculateRecommendationScore({
-            realTimeAvailabilityRatio: realTimeRatio,
-            historicalAvailabilityRatio: historicalRatio,
-            etaMinutes: drivingEtaMinutes ?? walkingEtaMinutes,
-            walkingDistanceMeters,
-            rainExpected,
-            isSheltered: carpark.isSheltered,
-          });
-          recommendationScore = result.finalScore;
-        }
-      } catch {
-        // score stays 0
-      }
-
       return {
         carpark,
         distanceMeters: walkingDistanceMeters,
-        drivingEtaMinutes,
+        drivingEtaMinutes: drivingEtaMinutes ?? walkingEtaMinutes,
         walkingEtaMinutes,
         availability,
-        recommendationScore,
+        historicalAvailabilityRatio: historicalRatio,
+        rainExpected,
       };
     }),
   );
 
+  let ranked: RankedCarpark[];
   if (sort === 'recommended') {
-    enriched.sort((a, b) => b.recommendationScore - a.recommendationScore);
+    try {
+      ranked = rankCarparks(candidates);
+    } catch {
+      ranked = candidates.map((c) => ({
+        carpark: c.carpark,
+        distanceMeters: c.distanceMeters,
+        drivingEtaMinutes: c.drivingEtaMinutes,
+        walkingEtaMinutes: c.walkingEtaMinutes,
+        availability: c.availability,
+        recommendationScore: 0,
+      }));
+    }
   } else {
-    enriched.sort((a, b) => a.distanceMeters - b.distanceMeters);
+    ranked = candidates
+      .map((c) => ({
+        carpark: c.carpark,
+        distanceMeters: c.distanceMeters,
+        drivingEtaMinutes: c.drivingEtaMinutes,
+        walkingEtaMinutes: c.walkingEtaMinutes,
+        availability: c.availability,
+        recommendationScore: 0,
+      }))
+      .sort((a, b) => a.distanceMeters - b.distanceMeters);
   }
 
-  return { carparks: enriched, degradedServices };
+  return { carparks: ranked, degradedServices };
 }
 
 /**

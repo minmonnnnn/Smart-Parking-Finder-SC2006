@@ -426,7 +426,7 @@ export function SearchBar({
                   Use My Current Location
                 </div>
                 <div style={{ fontSize: '11px', color: '#3B82F6' }}>
-                  GPS positioning for Start Point
+                  GPS positioning for Destination
                 </div>
               </div>
             </div>

@@ -20,7 +20,8 @@ import {
 } from "../features/search/searchApi";
 import { useNavigationRoutes } from "../features/navigation/hooks/useNavigationRoutes";
 import { calculateDistanceKm, WALKING_SPEED_M_PER_MIN } from "@smart-parking/shared-types";
-import { MenuIcon, MoreHorizontalIcon, SearchIcon, HeartIcon, UserIcon, LogOutIcon, CloseIcon } from "../components/icons";
+import { CloseIcon } from "../components/icons";
+import { MobileHeader } from "../components/MobileHeader";
 import { useWeather } from "../features/navigation/hooks/weather";
 import {
   SAMPLE_ORIGIN,
@@ -36,7 +37,6 @@ import type {
 } from "../features/navigation/types";
 
 export function NavigationPage({
-  onBack,
   initialCarparkNo,
   initialCarparkDetails,
   onNavigate,
@@ -81,7 +81,7 @@ export function NavigationPage({
   const [isLocating, setIsLocating] = useState(false);
   const [isSheetCollapsed, setIsSheetCollapsed] = useState(false);
   const [isSheetVisible, setIsSheetVisible] = useState(true);
-  const [isSideNavOpen, setIsSideNavOpen] = useState(false);
+
 
   //rcommended park const
   const [recommendedCarparks, setRecommendedCarparks] = useState<
@@ -250,7 +250,7 @@ interface NavigationTestWindow {
     lng: destinationLocation.lng,
   });
 
-  //gps current location
+  //gps current location as destination
   const handleGetCurrentLocation = () => {
     setIsLocating(true);
 
@@ -275,7 +275,21 @@ interface NavigationTestWindow {
           ? "My Current Location"
           : "Current Location (NTU Campus)";
 
-        setOriginLocation({ lat, lng, name });
+        setIsSheetVisible(false);
+        setShowCarparksList(true);
+        setIsLoadingCarparks(true);
+        setSearchQuery("");
+
+        setDestinationLocation({
+          placeId: "current-location",
+          main: name,
+          sub: inSingapore ? "GPS Location" : "NTU Campus Demo",
+          name,
+          lat,
+          lng,
+        });
+
+        void fetchNearbyCarparks(lat, lng);
         setIsLocating(false);
       },
       (error) => {
@@ -283,11 +297,25 @@ interface NavigationTestWindow {
           "Geolocation unavailable/blocked, using NTU campus demo location:",
           error.message,
         );
-        setOriginLocation({
-          lat: 1.3483,
-          lng: 103.6831,
-          name: "My Location (NTU Campus)",
+        const lat = 1.3483;
+        const lng = 103.6831;
+        const name = "Current Location (NTU Campus)";
+
+        setIsSheetVisible(false);
+        setShowCarparksList(true);
+        setIsLoadingCarparks(true);
+        setSearchQuery("");
+
+        setDestinationLocation({
+          placeId: "current-location-fallback",
+          main: name,
+          sub: "NTU Campus Demo",
+          name,
+          lat,
+          lng,
         });
+
+        void fetchNearbyCarparks(lat, lng);
         setIsLocating(false);
       },
       { enableHighAccuracy: true, timeout: 8000 },
@@ -525,28 +553,8 @@ interface NavigationTestWindow {
 
   return (
     <div className={styles.phoneFrame}>
-      {/*hamburger top nav*/}
-      <header className={styles.topHeaderBar}>
-        <button
-          type="button"
-          className={`${styles.headerButton} ${styles.hamburgerButton}`}
-          onClick={() => setIsSideNavOpen((prev) => !prev)}
-          aria-label="Navigation menu"
-          aria-expanded={isSideNavOpen}
-          title="Navigation menu"
-        >
-          <MenuIcon size={22} />
-        </button>
-        <button
-          type="button"
-          className={styles.headerButton}
-          onClick={onBack}
-          title="More options"
-          aria-label="More options"
-        >
-          <MoreHorizontalIcon size={22} />
-        </button>
-      </header>
+      {/*mobile header top nav*/}
+      <MobileHeader onNavigate={onNavigate} onLogout={onLogout} />
 
       {/*map*/}
       <div className={styles.mapArea}>
@@ -658,74 +666,7 @@ interface NavigationTestWindow {
         )}
       </div>
 
-      {/*hamburger side nav*/}
-      {isSideNavOpen && (
-        <div
-          className={styles.sideNavOverlay}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Side navigation"
-          onClick={() => setIsSideNavOpen(false)}
-        >
-          <div
-            className={styles.sideNavDrawer}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className={styles.sideNavBanner} />
-            <div className={styles.sideNavMenu}>
-              <button
-                type="button"
-                className={styles.sideNavItem}
-                onClick={() => {
-                  setIsSideNavOpen(false);
-                  onNavigate?.("navigation");
-                }}
-              >
-                <SearchIcon size={20} className={styles.sideNavIcon} />
-                <span className={styles.sideNavItemLabel}>Search</span>
-              </button>
 
-              <button
-                type="button"
-                className={styles.sideNavItem}
-                onClick={() => {
-                  setIsSideNavOpen(false);
-                  onNavigate?.("favourites");
-                }}
-              >
-                <HeartIcon size={20} className={styles.sideNavHeartIcon} />
-                <span className={styles.sideNavItemLabel}>Favourites</span>
-              </button>
-
-              <button
-                type="button"
-                className={styles.sideNavItem}
-                onClick={() => {
-                  setIsSideNavOpen(false);
-                  onNavigate?.("profile");
-                }}
-              >
-                <UserIcon size={20} className={styles.sideNavIcon} />
-                <span className={styles.sideNavItemLabel}>Profile</span>
-              </button>
-
-              <div className={styles.sideNavDivider} />
-
-              <button
-                type="button"
-                className={`${styles.sideNavItem} ${styles.sideNavLogout}`}
-                onClick={() => {
-                  setIsSideNavOpen(false);
-                  onLogout?.();
-                }}
-              >
-                <LogOutIcon size={20} className={styles.sideNavIcon} />
-                <span className={styles.sideNavItemLabel}>Log out</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/*carkpark details */}
       {selectedDetailCarparkNo && (

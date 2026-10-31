@@ -2,58 +2,40 @@ import type {
   RecommendationInput,
   RecommendationResult,
 } from '@smart-parking/shared-types';
+import type { IRankingStrategy } from './strategies/ranking-strategy.interface.js';
+import {
+  BalancedRankingStrategy,
+  MAX_ACCEPTABLE_WALKING_DISTANCE_METERS,
+  SHELTERED_RAIN_SCORE_MULTIPLIER,
+} from './strategies/balanced-ranking.strategy.js';
+import { CarparkRankingContext } from './carpark-ranking.context.js';
 
-/** Default walking limit in metres; tune this value after user testing. */
-export const MAX_ACCEPTABLE_WALKING_DISTANCE_METERS = 800;
+// Re-export constants and strategy types for backwards compatibility and clean imports
+export {
+  MAX_ACCEPTABLE_WALKING_DISTANCE_METERS,
+  SHELTERED_RAIN_SCORE_MULTIPLIER,
+};
+export * from './strategies/index.js';
+export { CarparkRankingContext } from './carpark-ranking.context.js';
+
+// Singleton context instance using default BalancedRankingStrategy
+const defaultContext = new CarparkRankingContext(new BalancedRankingStrategy());
 
 /**
- * FR49's weather bonus is unspecified in the SRS, so this uses a 1.1 multiplier
- * for sheltered carparks when rain is expected. The final score is capped at 1.
- */
-export const SHELTERED_RAIN_SCORE_MULTIPLIER = 1.1;
-
-/**
- * Scores availability, walking distance, and the sheltered-rain preference.
- * With history, availability is `w * realTime + (1 - w) * historical`, where
- * `w = 0.5 ** (etaMinutes / 15)`. Without history, it uses the real-time ratio
- * directly. The base score is `0.6 * availability + 0.4 * walking`.
+ * Scores availability, walking distance, and the sheltered-rain preference using the Strategy Pattern.
+ * Defaults to the balanced FR46–FR49 formula, with support for swappable ranking strategies.
  *
  * @param input Ratios, ETA, walking distance, and weather/shelter information.
+ * @param strategy Optional strategy override (defaults to BalancedRankingStrategy).
  * @returns Each score component and the final score.
  * @throws {TypeError} When the real-time availability ratio is null.
  */
 export const calculateRecommendationScore = (
   input: RecommendationInput,
+  strategy?: IRankingStrategy,
 ): RecommendationResult => {
-  const {
-    realTimeAvailabilityRatio,
-    historicalAvailabilityRatio,
-    etaMinutes,
-    walkingDistanceMeters,
-    rainExpected,
-    isSheltered,
-  } = input;
-
-  if (realTimeAvailabilityRatio === null) {
-    throw new TypeError(
-      'realTimeAvailabilityRatio is required to calculate a recommendation score',
-    );
+  if (strategy) {
+    return strategy.calculateScore(input);
   }
-
-  const availabilityScore =
-    historicalAvailabilityRatio === null
-      ? realTimeAvailabilityRatio
-      : Math.pow(0.5, etaMinutes / 15) * realTimeAvailabilityRatio +
-        (1 - Math.pow(0.5, etaMinutes / 15)) * historicalAvailabilityRatio;
-  const walkingScore = Math.max(
-    0,
-    1 - walkingDistanceMeters / MAX_ACCEPTABLE_WALKING_DISTANCE_METERS,
-  );
-  const baseScore = 0.6 * availabilityScore + 0.4 * walkingScore;
-  const finalScore =
-    rainExpected && isSheltered
-      ? Math.min(1, baseScore * SHELTERED_RAIN_SCORE_MULTIPLIER)
-      : baseScore;
-
-  return { availabilityScore, walkingScore, baseScore, finalScore };
+  return defaultContext.calculateScore(input);
 };

@@ -159,6 +159,43 @@ export function NavigationPage({
     };
   }, []);
 
+interface NavigationTestWindow {
+  __simulateMove?: (meters?: number) => void;
+  __setOrigin?: (lat: number, lng: number, name?: string) => void;
+}
+
+  // Development test helpers: test location movement directly in the browser console
+  useEffect(() => {
+    const testWindow = window as unknown as NavigationTestWindow;
+
+    testWindow.__simulateMove = (meters = 100) => {
+      setOriginLocation((prev) => {
+        const deltaDeg = meters / 111320;
+        const next = {
+          lat: parseFloat((prev.lat + deltaDeg).toFixed(5)),
+          lng: parseFloat((prev.lng + deltaDeg).toFixed(5)),
+          name: 'Simulated (+' + meters + 'm)',
+        };
+        console.log('[Test GPS] Shifted +' + meters + 'm -> (' + next.lat + ', ' + next.lng + ')');
+        return next;
+      });
+    };
+
+    testWindow.__setOrigin = (lat: number, lng: number, name?: string) => {
+      console.log('[Test GPS] Setting origin directly to (' + lat + ', ' + lng + ')');
+      setOriginLocation({
+        lat,
+        lng,
+        name: name || ('Simulated (' + lat.toFixed(4) + ', ' + lng.toFixed(4) + ')'),
+      });
+    };
+
+    return () => {
+      delete testWindow.__simulateMove;
+      delete testWindow.__setOrigin;
+    };
+  }, []);
+
   //load carpark detail based on carparkNo
   useEffect(() => {
     if (initialCarparkNo) {

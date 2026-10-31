@@ -150,7 +150,7 @@ function AppShell() {
                 initial,
               );
             }}
-            onSearch={() => navigate("search")}
+            onSearch={() => navigate("navigation")}
             onNavigate={navigate}
             onLogout={logout}
           />

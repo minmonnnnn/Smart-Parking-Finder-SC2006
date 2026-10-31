@@ -61,6 +61,7 @@ export function NavigationPage({
   }, [originLocation]);
   const simulationTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const isSimulatingRef = useRef(false);
+  const [isSimulating, setIsSimulating] = useState(false);
   const [simulatedOrigin, setSimulatedOrigin] = useState<typeof SAMPLE_ORIGIN | null>(null);
   const [carparkLocation, setCarparkLocation] = useState(initialCp);
   const [destinationLocation, setDestinationLocation] =
@@ -297,6 +298,7 @@ interface NavigationTestWindow {
           setRemainingPath(plainPath.slice(i));
           if (i === plainPath.length - 1) {
             setRemainingPath(null);
+            setIsSimulating(false);
             onComplete();
           }
         }, cumulativeMs);
@@ -318,6 +320,7 @@ interface NavigationTestWindow {
       simulationTimeoutsRef.current.forEach(clearTimeout);
       simulationTimeoutsRef.current = [];
       isSimulatingRef.current = true;
+      setIsSimulating(true);
 
       const speedMs = (speedKmh * 1000) / 3600; // m/s
       let cumulativeMs = 0;
@@ -336,6 +339,7 @@ interface NavigationTestWindow {
       simulationTimeoutsRef.current.forEach(clearTimeout);
       simulationTimeoutsRef.current = [];
       isSimulatingRef.current = false;
+      setIsSimulating(false);
       setSimulatedOrigin(null);
       setRemainingPath(null);
       console.log('[Sim] Simulation stopped');
@@ -636,6 +640,7 @@ interface NavigationTestWindow {
     if (!path || path.length < 2) return;
     const walkingSpeedMs = 5 * 1000 / 3600; // 5 km/h in m/s
     isSimulatingRef.current = true;
+    setIsSimulating(true);
 
     function getLatLng(point: { lat: number; lng: number } | google.maps.LatLng) {
       if (typeof (point as google.maps.LatLng).lat === 'function') {
@@ -666,6 +671,7 @@ interface NavigationTestWindow {
         setRemainingPath(plainPath.slice(i));
         if (i === plainPath.length - 1) {
           isSimulatingRef.current = false;
+          setIsSimulating(false);
           setSimulatedOrigin(null);
           setRemainingPath(null);
           setHasArrived(true);
@@ -742,6 +748,7 @@ interface NavigationTestWindow {
         {/*google maps*/}
         <NavigationMap
           origin={simulatedOrigin ?? originLocation}
+          isSimulating={isSimulating}
           carpark={carparkLocation}
           destination={destinationLocation}
           drivingPath={isSheetVisible ? (remainingPath ?? activeDrivingRoute?.path) : undefined}

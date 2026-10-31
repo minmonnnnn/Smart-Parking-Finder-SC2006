@@ -1,15 +1,12 @@
 import { useEffect, useState } from 'react';
 import type { RouteInfo, WalkingInfo } from '../types';
-import {
-  INITIAL_DRIVING_PATH,
-  INITIAL_WALKING_PATH,
-  calculateDistanceKm,
-} from '../constants';
+import { calculateDistanceKm } from '../constants';
 
 interface UseNavigationRoutesProps {
   origin: { lat: number; lng: number; name: string };
-  carpark: { lat: number; lng: number; name: string };
-  destination: { lat: number; lng: number; name: string };
+  carpark?: { lat: number; lng: number; name: string } | null;
+  destination?: { lat: number; lng: number; name: string } | null;
+  enabled?: boolean;
 }
 
 // Get driving and walking routes from the api
@@ -17,44 +14,26 @@ export function useNavigationRoutes({
   origin,
   carpark,
   destination,
+  enabled = true,
 }: UseNavigationRoutesProps) {
   const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
-  // Placeholder data
-  const [drivingRoutes, setDrivingRoutes] = useState<RouteInfo[]>([
-    {
-      summary: 'via Sin Ming Rd',
-      durationMinutes: 8,
-      distanceKm: 2.8,
-      traffic: 'Moderate',
-      path: INITIAL_DRIVING_PATH,
-    },
-    {
-      summary: 'via Marymount Rd',
-      durationMinutes: 11,
-      distanceKm: 3.5,
-      traffic: 'Light',
-      path: [
-        { lat: 1.3650, lng: 103.8320 },
-        { lat: 1.3660, lng: 103.8390 },
-        { lat: 1.3610, lng: 103.8400 },
-        { lat: 1.3585, lng: 103.8375 },
-      ],
-    },
-  ]);
+  const [drivingRoutes, setDrivingRoutes] = useState<RouteInfo[]>([]);
   const [activeRouteIndex, setActiveRouteIndex] = useState(0);
-
-  const [walkingInfo, setWalkingInfo] = useState<WalkingInfo>({
-    durationMinutes: 4,
-    distanceMeters: 350,
-    path: INITIAL_WALKING_PATH,
-  });
-
+  const [walkingInfo, setWalkingInfo] = useState<WalkingInfo | null>(null);
   const [isCalculatingRoute, setIsCalculatingRoute] = useState(false);
 
   useEffect(() => {
+    if (!enabled || !carpark || !destination) {
+      setDrivingRoutes([]);
+      setWalkingInfo(null);
+      setIsCalculatingRoute(false);
+      return;
+    }
+
     let isCancelled = false;
 
     async function fetchLiveRoutes() {
+      if (!carpark || !destination) return;
       setIsCalculatingRoute(true);
 
       // Get driving distance
@@ -173,12 +152,13 @@ export function useNavigationRoutes({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- primitives prevent re-render loops from object identity changes
   }, [
+    enabled,
     origin.lat,
     origin.lng,
-    carpark.lat,
-    carpark.lng,
-    destination.lat,
-    destination.lng,
+    carpark?.lat,
+    carpark?.lng,
+    destination?.lat,
+    destination?.lng,
     apiBaseUrl,
   ]);
 
@@ -186,7 +166,7 @@ export function useNavigationRoutes({
     drivingRoutes,
     activeRouteIndex,
     setActiveRouteIndex,
-    activeDrivingRoute: drivingRoutes[activeRouteIndex] || drivingRoutes[0],
+    activeDrivingRoute: drivingRoutes[activeRouteIndex] || drivingRoutes[0] || null,
     walkingInfo,
     isCalculatingRoute,
   };

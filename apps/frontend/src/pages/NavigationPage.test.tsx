@@ -54,6 +54,13 @@ describe('NavigationPage side navigation and header', () => {
     expect(screen.queryByRole('dialog', { name: 'Side navigation' })).not.toBeInTheDocument()
   })
 
+  it('renders clean empty state on entry without initial carpark details', () => {
+    render(<NavigationPage />)
+
+    expect(screen.queryByTestId('mock-bottom-sheet')).not.toBeInTheDocument()
+    expect(screen.getByPlaceholderText('Search destination...')).toBeInTheDocument()
+  })
+
   it('opens side navigation drawer when hamburger button is clicked', async () => {
     const user = userEvent.setup()
     render(<NavigationPage />)
@@ -143,4 +150,3 @@ describe('NavigationPage side navigation and header', () => {
     expect(bottomSheet).toHaveAttribute('data-destination', 'BLK 320 SHUNFU ROAD')
   })
 })
-

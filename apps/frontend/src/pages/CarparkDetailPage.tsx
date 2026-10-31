@@ -343,8 +343,8 @@ export function CarparkDetailPage({
         {/* Availability alert subscription */}
         <AvailabilityAlertControl
           carParkNo={carpark.carParkNo}
-          userId={session?.userId ?? null}
-          accessToken={session?.token ?? null}
+          userId={session?.isGuest ? null : (session?.userId ?? null)}
+          accessToken={session?.isGuest ? null : (session?.token ?? null)}
         />
 
         {/* Info rows */}

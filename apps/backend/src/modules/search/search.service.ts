@@ -19,7 +19,7 @@ import {
   getWalkingRoute,
   calculateDistanceKm,
 } from "../routing/routing.service.js";
-import { calculateRecommendationScore } from "../recommendation/recommendation-score.js";
+import { rankCarparks, type RecommendationCandidate } from "../recommendation/rank-carparks.js";
 import { getHistoricalAvailabilityRatio } from "../recommendation/historical-availability.js";
 import { getWeather } from "../weather/weather.service.js";
 
@@ -181,98 +181,84 @@ export async function getNearbyCarparks(
   const arrivalDayOfWeek = now.getDay();
   const arrivalHour = now.getHours();
 
-  const enriched = await Promise.all(
-    topCandidates.map(
-      async ({
-        carpark,
-        availability,
-        walkingDistanceMeters,
-      }): Promise<RankedCarpark> => {
-        let walkingEtaMinutes = Math.max(
-          1,
-          Math.round(walkingDistanceMeters / 75),
+  const candidates: RecommendationCandidate[] = await Promise.all(
+    topCandidates.map(async ({ carpark, availability, walkingDistanceMeters }): Promise<RecommendationCandidate> => {
+      let walkingEtaMinutes = Math.max(1, Math.round(walkingDistanceMeters / 75));
+      try {
+        const walkRoute = await getWalkingRoute(
+          carpark.latitude, carpark.longitude,
+          destinationLat, destinationLng,
         );
+        walkingEtaMinutes = walkRoute.durationMinutes;
+      } catch {
+        if (!degradedServices.includes('routing')) degradedServices.push('routing');
+      }
+
+      let drivingEtaMinutes: number | null = null;
+      if (originLat !== undefined && originLng !== undefined) {
         try {
-          const walkRoute = await getWalkingRoute(
-            carpark.latitude,
-            carpark.longitude,
-            destinationLat,
-            destinationLng,
-          );
-          walkingEtaMinutes = walkRoute.durationMinutes;
+          const driveRoute = await getDrivingRoute(originLat, originLng, carpark.latitude, carpark.longitude);
+          drivingEtaMinutes = driveRoute.durationMinutes;
         } catch {
-          if (!degradedServices.includes("routing"))
-            degradedServices.push("routing");
+          if (!degradedServices.includes('routing')) degradedServices.push('routing');
         }
+      }
 
-        let drivingEtaMinutes: number | null = null;
-        if (originLat !== undefined && originLng !== undefined) {
-          try {
-            const driveRoute = await getDrivingRoute(
-              originLat,
-              originLng,
-              carpark.latitude,
-              carpark.longitude,
-            );
-            drivingEtaMinutes = driveRoute.durationMinutes;
-          } catch {
-            if (!degradedServices.includes("routing"))
-              degradedServices.push("routing");
-          }
-        }
+      let historicalRatio: number | null = null;
+      try {
+        historicalRatio = await getHistoricalAvailabilityRatio(
+          carpark.carParkNo,
+          arrivalDayOfWeek,
+          arrivalHour,
+        );
+      } catch {
+        if (!degradedServices.includes('historical')) degradedServices.push('historical');
+      }
 
-        let historicalRatio: number | null = null;
-        try {
-          historicalRatio = await getHistoricalAvailabilityRatio(
-            carpark.carParkNo,
-            arrivalDayOfWeek,
-            arrivalHour,
-          );
-        } catch {
-          if (!degradedServices.includes("historical"))
-            degradedServices.push("historical");
-        }
-
-        let recommendationScore = 0;
-        const realTimeRatio =
-          availability.totalLots > 0
-            ? availability.availableLots / availability.totalLots
-            : null;
-        try {
-          if (realTimeRatio !== null) {
-            const result = calculateRecommendationScore({
-              realTimeAvailabilityRatio: realTimeRatio,
-              historicalAvailabilityRatio: historicalRatio,
-              etaMinutes: drivingEtaMinutes ?? walkingEtaMinutes,
-              walkingDistanceMeters,
-              rainExpected,
-              isSheltered: carpark.isSheltered,
-            });
-            recommendationScore = result.finalScore;
-          }
-        } catch {
-          // score stays 0
-        }
-
-        return {
-          carpark,
-          distanceMeters: walkingDistanceMeters,
-          drivingEtaMinutes,
-          walkingEtaMinutes,
-          availability,
-          recommendationScore,
-        };
-      },
-    ),
+      return {
+        carpark,
+        distanceMeters: walkingDistanceMeters,
+        drivingEtaMinutes: drivingEtaMinutes ?? walkingEtaMinutes,
+        walkingEtaMinutes,
+        availability,
+        historicalAvailabilityRatio: historicalRatio,
+        rainExpected,
+      };
+    }),
   );
 
-  if (sort === "recommended") {
-    enriched.sort((a, b) => b.recommendationScore - a.recommendationScore);
+  let ranked: RankedCarpark[];
+  if (sort === 'recommended') {
+    try {
+      ranked = rankCarparks(candidates);
+    } catch {
+      ranked = candidates.map((c) => ({
+        carpark: c.carpark,
+        distanceMeters: c.distanceMeters,
+        drivingEtaMinutes: c.drivingEtaMinutes,
+        walkingEtaMinutes: c.walkingEtaMinutes,
+        availability: c.availability,
+        recommendationScore: 0,
+      }));
+    }
   } else {
-    enriched.sort((a, b) => a.distanceMeters - b.distanceMeters);
+    ranked = candidates
+      .map((c) => ({
+        carpark: c.carpark,
+        distanceMeters: c.distanceMeters,
+        drivingEtaMinutes: c.drivingEtaMinutes,
+        walkingEtaMinutes: c.walkingEtaMinutes,
+        availability: c.availability,
+        recommendationScore: 0,
+      }))
+      .sort((a, b) => a.distanceMeters - b.distanceMeters);
   }
 
-  return { carparks: enriched, degradedServices };
+  if (originLat === undefined || originLng === undefined) {
+    ranked = ranked.map((r) => ({ ...r, drivingEtaMinutes: null }));
+  }
+
+  return { carparks: ranked, degradedServices };
 }
 
 /**

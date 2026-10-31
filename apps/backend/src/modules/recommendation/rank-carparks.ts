@@ -5,6 +5,7 @@ import type {
 } from '@smart-parking/shared-types';
 import { ApiException } from '../../lib/errors/index.js';
 import { calculateRecommendationScore } from './recommendation-score.js';
+import type { IRankingStrategy } from './strategies/ranking-strategy.interface.js';
 
 /** Carpark data and caller-supplied values needed for scoring. */
 export interface RecommendationCandidate {
@@ -59,17 +60,19 @@ const hasValidScoringData = (
 };
 
 /**
- * Scores candidates and sorts them from highest to lowest score. Invalid
- * candidates, including those with null ETA, are skipped. Ties keep input
+ * Scores candidates and sorts them from highest to lowest score using the Strategy Pattern.
+ * Invalid candidates, including those with null ETA, are skipped. Ties keep input
  * order. Historical ratios and rain data must be supplied by the caller.
  *
  * @param candidates Carparks and the data needed to score them.
+ * @param strategy Optional scoring strategy override (defaults to BalancedRankingStrategy).
  * @returns Scoreable candidates as RankedCarpark results.
  * @throws {ApiException} With status 404 and code NO_CARPARKS_FOUND if the
  *   input is empty or no candidate can be scored.
  */
 export const rankCarparks = (
   candidates: readonly RecommendationCandidate[],
+  strategy?: IRankingStrategy,
 ): RankedCarpark[] => {
   const rankedCandidates = candidates.flatMap((candidate, index) => {
     if (!hasValidScoringData(candidate)) {
@@ -84,7 +87,7 @@ export const rankCarparks = (
       walkingDistanceMeters: candidate.distanceMeters,
       rainExpected: candidate.rainExpected,
       isSheltered: candidate.carpark.isSheltered,
-    });
+    }, strategy);
 
     const rankedCarpark: RankedCarpark = {
       carpark: candidate.carpark,

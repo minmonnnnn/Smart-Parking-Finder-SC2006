@@ -10,6 +10,7 @@ import type {
 export interface AuthSession {
   userId: string
   token: string
+  isGuest?: boolean
 }
 
 export interface AuthContextValue {
@@ -17,8 +18,10 @@ export interface AuthContextValue {
   profile: User | null
   loading: boolean
   error: Error | null
+  isGuest: boolean
   register(input: RegisterRequest): Promise<RegisterResponse>
   login(input: LoginRequest): Promise<void>
+  loginAsGuest(): void
   logout(): void
   loadProfile(): Promise<User>
   updateProfile(input: UpdateProfileRequest): Promise<User>

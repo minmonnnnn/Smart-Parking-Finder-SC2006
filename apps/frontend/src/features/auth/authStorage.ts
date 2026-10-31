@@ -11,7 +11,12 @@ export function loadSession(): AuthSession | null {
     if (typeof value === 'object' && value !== null &&
       typeof Reflect.get(value, 'userId') === 'string' &&
       typeof Reflect.get(value, 'token') === 'string') {
-      const session = { userId: Reflect.get(value, 'userId'), token: Reflect.get(value, 'token') }
+      const isGuest = Reflect.get(value, 'isGuest') === true
+      const session: AuthSession = {
+        userId: Reflect.get(value, 'userId'),
+        token: Reflect.get(value, 'token'),
+        ...(isGuest ? { isGuest: true } : {}),
+      }
       saveSession(session)
       return session
     }
@@ -24,7 +29,11 @@ export function loadSession(): AuthSession | null {
 }
 
 export function saveSession(session: AuthSession): void {
-  localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ userId: session.userId, token: session.token }))
+  localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({
+    userId: session.userId,
+    token: session.token,
+    ...(session.isGuest ? { isGuest: true } : {}),
+  }))
 }
 
 export function clearSession(): void {

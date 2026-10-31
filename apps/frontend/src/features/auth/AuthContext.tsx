@@ -23,9 +23,22 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [loading, setLoading] = useState(() => session !== null)
   const [error, setError] = useState<Error | null>(null)
 
+  const isGuest = !!session?.isGuest
+
   const loadProfile = useCallback(async (): Promise<User> => {
     const requestSession = session
     if (!requestSession || sessionRef.current !== requestSession) throw new Error('Not authenticated')
+    if (requestSession.isGuest) {
+      const guestProfile: User = {
+        id: 'guest',
+        name: 'Guest User',
+        email: 'guest@smartparking.local',
+        vehicleType: 'CAR',
+      }
+      setProfile(guestProfile)
+      setLoading(false)
+      return guestProfile
+    }
     const operation = ++profileOperationRef.current
     setLoading(true)
     setError(null)
@@ -43,7 +56,19 @@ export function AuthProvider({ children }: PropsWithChildren) {
   }, [session])
 
   useEffect(() => {
-    if (session) void Promise.resolve().then(loadProfile).catch(() => undefined)
+    if (session) {
+      if (session.isGuest) {
+        setProfile({
+          id: 'guest',
+          name: 'Guest User',
+          email: 'guest@smartparking.local',
+          vehicleType: 'CAR',
+        })
+        setLoading(false)
+      } else {
+        void Promise.resolve().then(loadProfile).catch(() => undefined)
+      }
+    }
   }, [session, loadProfile])
 
   const register = useCallback(async (input: RegisterRequest): Promise<RegisterResponse> => {
@@ -89,6 +114,27 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
   }, [])
 
+  const loginAsGuest = useCallback(() => {
+    authOperationRef.current += 1
+    profileOperationRef.current += 1
+    const guestSession: AuthSession = {
+      userId: 'guest',
+      token: '',
+      isGuest: true,
+    }
+    sessionRef.current = guestSession
+    saveSession(guestSession)
+    setSession(guestSession)
+    setProfile({
+      id: 'guest',
+      name: 'Guest User',
+      email: 'guest@smartparking.local',
+      vehicleType: 'CAR',
+    })
+    setError(null)
+    setLoading(false)
+  }, [])
+
   const logout = useCallback(() => {
     authOperationRef.current += 1
     profileOperationRef.current += 1
@@ -103,6 +149,16 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const updateProfile = useCallback(async (input: UpdateProfileRequest): Promise<User> => {
     const requestSession = sessionRef.current
     if (!requestSession) throw new Error('Not authenticated')
+    if (requestSession.isGuest) {
+      const updatedGuest: User = {
+        id: 'guest',
+        name: input.name ?? 'Guest User',
+        email: 'guest@smartparking.local',
+        vehicleType: input.vehicleType ?? 'CAR',
+      }
+      setProfile(updatedGuest)
+      return updatedGuest
+    }
     const operation = ++profileOperationRef.current
     setLoading(true)
     setError(null)
@@ -126,6 +182,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const deleteAccount = useCallback(async (): Promise<void> => {
     const requestSession = sessionRef.current
     if (!requestSession) throw new Error('Not authenticated')
+    if (requestSession.isGuest) {
+      logout()
+      return
+    }
     const operation = ++authOperationRef.current
     setLoading(true)
     setError(null)
@@ -146,11 +206,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
     } finally {
       if (authOperationRef.current === operation && sessionRef.current === requestSession) setLoading(false)
     }
-  }, [])
+  }, [logout])
 
   const value = useMemo<AuthContextValue>(() => ({
-    session, profile, loading, error, register, login, logout, loadProfile, updateProfile, deleteAccount,
-  }), [session, profile, loading, error, register, login, logout, loadProfile, updateProfile, deleteAccount])
+    session, profile, loading, error, isGuest, register, login, loginAsGuest, logout, loadProfile, updateProfile, deleteAccount,
+  }), [session, profile, loading, error, isGuest, register, login, loginAsGuest, logout, loadProfile, updateProfile, deleteAccount])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

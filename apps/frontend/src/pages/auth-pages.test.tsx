@@ -69,6 +69,19 @@ describe('SignInPage', () => {
     await user.click(screen.getByRole('button', { name: 'Create an account' }))
     expect(onSwitchMode).toHaveBeenCalledTimes(1)
   })
+
+  it('allows continuing as guest without sending network request', async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    const onSignedIn = vi.fn()
+    renderPage(<SignInPage onSignedIn={onSignedIn} onSwitchMode={vi.fn()} />)
+    const user = userEvent.setup()
+    const guestBtn = screen.getByRole('button', { name: 'Continue as Guest' })
+    expect(guestBtn).toBeInTheDocument()
+    await user.click(guestBtn)
+    expect(onSignedIn).toHaveBeenCalledTimes(1)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
 })
 
 describe('SignUpPage', () => {

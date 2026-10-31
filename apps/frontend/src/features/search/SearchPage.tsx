@@ -315,17 +315,6 @@ function SearchBar({
       {filtersOpen && (
         <div style={{ marginTop: vars.space[2], display: "flex", justifyContent: "space-between", gap: 4 }}>
           <div style={{ position: "relative", flex: 1 }}>
-            <FilterPill label="Carpark Pricing" active={pricingAsc} expanded={openDropdown === "pricing"} onClick={() => toggleDropdown("pricing")} />
-            {openDropdown === "pricing" && (
-              <DropdownMenu>
-                <DropdownItem selected={pricingAsc} onClick={() => { onPricingAsc(!pricingAsc); setOpenDropdown(null); }}>
-                  Lowest to Highest
-                </DropdownItem>
-              </DropdownMenu>
-            )}
-          </div>
-
-          <div style={{ position: "relative", flex: 1 }}>
             <FilterPill label="EV Charger" active={evFilter !== null} expanded={openDropdown === "ev"} onClick={() => toggleDropdown("ev")} />
             {openDropdown === "ev" && (
               <DropdownMenu>
@@ -358,7 +347,7 @@ function SearchBar({
         </div>
       )}
 
-      {filtersOpen && (pricingAsc || evFilter !== null || shelteredFilter !== null || availabilityDesc) && (
+      {filtersOpen && (evFilter !== null || shelteredFilter !== null || availabilityDesc) && (
         <button onClick={() => { onClearFilters(); setOpenDropdown(null); }} style={{
           display: "block", margin: `${vars.space[1]} 0 0`, background: "none", border: "none",
           cursor: "pointer", fontSize: vars.fontSize.xs, color: vars.color.secondary,

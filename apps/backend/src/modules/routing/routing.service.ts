@@ -126,6 +126,13 @@ export async function getDrivingRoute(
 
     const data = (await response.json()) as { routes?: GoogleRouteItem[]; error?: { message?: string } };
 
+    if (!response.ok || data.error) {
+      console.warn(
+        `[Routes API] Driving route computeRoutes failed (${response.status}):`,
+        data.error?.message || response.statusText
+      );
+    }
+
     if (data.routes && Array.isArray(data.routes) && data.routes.length > 0) {
       const parsedRoutes: DrivingRoute[] = await Promise.all(
         data.routes.map(async (r: GoogleRouteItem) => {
@@ -213,6 +220,13 @@ export async function getWalkingRoute(
     });
 
     const data = (await response.json()) as { routes?: GoogleRouteItem[]; error?: { message?: string } };
+
+    if (!response.ok || data.error) {
+      console.warn(
+        `[Routes API] Walking route computeRoutes failed (${response.status}):`,
+        data.error?.message || response.statusText
+      );
+    }
 
     if (data.routes && Array.isArray(data.routes) && data.routes.length > 0) {
       const firstRoute: GoogleRouteItem = data.routes[0]!;

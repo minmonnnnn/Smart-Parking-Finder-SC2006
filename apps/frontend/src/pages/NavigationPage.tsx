@@ -256,7 +256,7 @@ interface NavigationTestWindow {
     lng: destinationLocation?.lng,
   });
 
-  //gps current location as destination
+  // GPS current location as destination (used by SearchBar dropdown)
   const handleGetCurrentLocation = () => {
     setIsLocating(true);
 
@@ -332,6 +332,54 @@ interface NavigationTestWindow {
     );
   };
 
+  // Updates current device location (Point A) on the map without starting a search (used by floating map button)
+  const handleUpdateCurrentLocation = () => {
+    setIsLocating(true);
+
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by your browser.");
+      setIsLocating(false);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const rawLat = position.coords.latitude;
+        const rawLng = position.coords.longitude;
+        const inSingapore =
+          rawLat >= 1.15 &&
+          rawLat <= 1.48 &&
+          rawLng >= 103.55 &&
+          rawLng <= 104.05;
+        const lat = inSingapore ? rawLat : 1.3483;
+        const lng = inSingapore ? rawLng : 103.6831;
+        const name = inSingapore
+          ? "My Current Location"
+          : "Current Location (NTU Campus)";
+
+        setOriginLocation({ lat, lng, name });
+        setIsLocating(false);
+      },
+      (error) => {
+        console.warn(
+          "Geolocation unavailable/blocked, using NTU campus demo location:",
+          error.message,
+        );
+        const lat = 1.3483;
+        const lng = 103.6831;
+        const name = "Current Location (NTU Campus)";
+
+        setOriginLocation({ lat, lng, name });
+        setIsLocating(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 5000,
+      },
+    );
+  };
+
   //search suggestions
   useEffect(() => {
     let cancelled = false;
@@ -348,7 +396,14 @@ interface NavigationTestWindow {
         const results = await searchDestinations(searchQuery);
         if (!cancelled) {
           if (results.length > 0) {
-            setSuggestions(results);
+            setSuggestions(
+              results.map((r) => ({
+                placeId: r.placeId,
+                main: r.name,
+                sub: r.address || "Singapore",
+                name: r.name,
+              }))
+            );
           } else {
             const lower = searchQuery.toLowerCase();
             const fallback = POPULAR_DESTINATIONS.filter(
@@ -399,13 +454,13 @@ interface NavigationTestWindow {
 
       try {
         const origin = originLocationRef.current;
-        const results = await getNearbyCarparks(
-          destLat,
-          destLng,
-          origin.lat,
-          origin.lng,
+        const results = await getNearbyCarparks({
+          destinationLat: destLat,
+          destinationLng: destLng,
+          originLat: origin.lat,
+          originLng: origin.lng,
           filters,
-        );
+        });
 
         const carparks = results.carparks || [];
         if (carparks.length > 0) {
@@ -438,18 +493,16 @@ interface NavigationTestWindow {
         return {
           carParkNo: cp.placeId || "CP-FALLBACK",
           name: cp.main,
-          address: cp.sub,
           latitude: cp.lat!,
           longitude: cp.lng!,
           availableLots: cp.availableLots ?? 42,
           totalLots: 120,
           parkingCost: 0.6,
-          distanceKm,
-          walkingMinutes,
-          etaMinutes: Math.max(2, Math.round((distanceKm / 35) * 60)),
+          distanceMeters: Math.round(distanceKm * 1000),
+          walkingEtaMinutes: walkingMinutes,
           isSheltered: true,
           hasEvCharging: isEvMatch,
-          carParkType: "Multi-storey",
+          carparkType: "Multi-storey",
         };
       });
 
@@ -458,7 +511,7 @@ interface NavigationTestWindow {
       }
       fallbackItems = fallbackItems.filter((cp) => cp.availableLots > 0);
 
-      fallbackItems.sort((a, b) => (a.distanceKm ?? 0) - (b.distanceKm ?? 0));
+      fallbackItems.sort((a, b) => (a.distanceMeters ?? 0) - (b.distanceMeters ?? 0));
       setRecommendedCarparks(fallbackItems);
       setIsLoadingCarparks(false);
     },
@@ -623,7 +676,7 @@ interface NavigationTestWindow {
           isSheetCollapsed={isSheetCollapsed}
           isSheetVisible={isSheetVisible}
           showCarparksList={showCarparksList}
-          onGetCurrentLocation={handleGetCurrentLocation}
+          onGetCurrentLocation={handleUpdateCurrentLocation}
         />
 
         {/*carpark list*/}
@@ -682,7 +735,7 @@ interface NavigationTestWindow {
             drivingRoutes={drivingRoutes}
             activeRouteIndex={activeRouteIndex}
             onSelectRoute={setActiveRouteIndex}
-            walkingInfo={walkingInfo}
+            walkingInfo={walkingInfo ?? undefined}
             isCalculating={isCalculatingRoute}
             isSheetCollapsed={isSheetCollapsed}
             onToggleCollapse={() => setIsSheetCollapsed((prev) => !prev)}
@@ -704,13 +757,16 @@ interface NavigationTestWindow {
             if (!cp) return undefined;
             return {
               carpark: {
-                carParkNo: cp.carParkNo,
-                address: cp.address || cp.name,
+                carParkNo: cp.carParkNo || selectedDetailCarparkNo,
+                address: cp.name,
                 latitude: cp.latitude ?? 1.352,
                 longitude: cp.longitude ?? 103.836,
                 carParkType:
-                  (cp.carParkType as CarparkDetailPageProps["initialDetails"] extends { carpark: { carParkType: infer T } } ? T : never) ||
-                  "Multi-storey",
+                  (cp.carparkType as
+                    | "Surface"
+                    | "Basement"
+                    | "Multi-storey"
+                    | "Covered") || "Multi-storey",
                 isSheltered: cp.isSheltered ?? true,
                 totalLots: cp.totalLots,
                 freeParking: "SUN & PH FR 7AM-10.30PM",
@@ -775,5 +831,3 @@ interface NavigationTestWindow {
     </div>
   );
 }
-
-type CarparkDetailPageProps = React.ComponentProps<typeof CarparkDetailPage>;

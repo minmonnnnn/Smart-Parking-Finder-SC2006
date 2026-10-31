@@ -231,7 +231,13 @@ export function NavigationMap({
             ? styles.myLocationButtonCollapsed
             : ''
         }`}
-        onClick={onGetCurrentLocation}
+        onClick={() => {
+          if (mapInstanceRef.current && origin) {
+            mapInstanceRef.current.panTo({ lat: origin.lat, lng: origin.lng });
+            mapInstanceRef.current.setZoom(15);
+          }
+          onGetCurrentLocation();
+        }}
         title="Get Current Location (GPS)"
       >
         {isLocating ? <LoaderIcon size={20} className={styles.spinner} /> : <CrosshairIcon size={20} />}

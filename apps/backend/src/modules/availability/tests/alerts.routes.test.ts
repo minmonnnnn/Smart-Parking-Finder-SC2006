@@ -1,97 +1,120 @@
-import express from "express";
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createApp } from "../../../app.js";
 import { createAlertRouter, type VerifyAlertToken } from "../alerts.routes.js";
-import { replaceAvailabilityCache } from "../cache.js";
-import { getEnabledAlerts } from "../alerts.repository.js";
+import type {
+  AlertRepository,
+  StoredAvailabilityAlert,
+} from "../alerts.repository.js";
+import type { AvailabilityRepository } from "../repository.js";
+import type { AvailabilityInfo } from "../service.js";
 
 const verifyToken = vi.fn<VerifyAlertToken>();
+const createAlert = vi.fn<AlertRepository["createAlert"]>();
+const setAlertEnabled = vi.fn<AlertRepository["setAlertEnabled"]>();
+const getAvailabilityByCarParkNo =
+  vi.fn<AvailabilityRepository["getAvailabilityByCarParkNo"]>();
 
-const app = express();
+let storedAlerts: Map<number, StoredAvailabilityAlert>;
+let nextId: number;
 
-app.use(express.json());
-app.use("/api/alerts", createAlertRouter(verifyToken));
+const availability: AvailabilityInfo = {
+  availableLots: 60,
+  totalLots: 100,
+  status: "High",
+  lastUpdated: "2026-10-15T02:00:00.000Z",
+  isStale: false,
+};
 
-function seedAvailability() {
-  replaceAvailabilityCache([
-    {
-      carParkNo: "AK19",
-      availableLots: 60,
-      totalLots: 100,
-      fetchedAt: new Date(),
-    },
-  ]);
-}
+const app = createApp({
+  alerts: createAlertRouter({
+    verifyToken,
+    alerts: { createAlert, setAlertEnabled },
+    availability: { getAvailabilityByCarParkNo },
+  }),
+});
 
-async function createOwnedAlert() {
+async function createOwnedAlert(): Promise<string> {
   const response = await request(app)
     .post("/api/alerts")
     .set("Authorization", "Bearer user-1-token")
-    .send({ carParkNo: "AK19" });
+    .send({ carParkNo: "AK19" })
+    .expect(201);
 
-  expect(response.status).toBe(201);
-
-  return String(response.body.alertId);
+  expect(response.body.alertId).toEqual(expect.any(String));
+  return response.body.alertId;
 }
 
 describe("availability alert routes", () => {
   beforeEach(() => {
-    seedAvailability();
+    vi.resetAllMocks();
 
-    verifyToken.mockReset();
+    storedAlerts = new Map();
+    nextId = 1;
+
     verifyToken.mockImplementation(async (token) => {
-      if (token === "user-1-token") {
-        return { userId: "user-1" };
-      }
-
-      if (token === "user-2-token") {
-        return { userId: "user-2" };
-      }
-
+      if (token === "user-1-token") return { userId: "user-1" };
+      if (token === "user-2-token") return { userId: "user-2" };
       return null;
+    });
+
+    getAvailabilityByCarParkNo.mockImplementation(async (carParkNo) =>
+      carParkNo === "AK19" ? availability : null,
+    );
+
+    createAlert.mockImplementation(async (userId, carParkNo, status) => {
+      const alert: StoredAvailabilityAlert = {
+        id: nextId++,
+        userId,
+        carParkNo,
+        enabled: true,
+        lastKnownStatus: status,
+      };
+
+      storedAlerts.set(alert.id, alert);
+      return { ...alert };
+    });
+
+    setAlertEnabled.mockImplementation(async (id, userId, enabled) => {
+      const alert = storedAlerts.get(id);
+
+      if (!alert || alert.userId !== userId) return null;
+
+      alert.enabled = enabled;
+      return { ...alert };
     });
   });
 
   it("creates an alert owned by the authenticated user", async () => {
     const alertId = await createOwnedAlert();
 
-    expect(getEnabledAlerts()).toContainEqual(
-      expect.objectContaining({
-        id: Number(alertId),
-        userId: "user-1",
-        carParkNo: "AK19",
-        enabled: true,
-      }),
-    );
+    expect(createAlert).toHaveBeenCalledWith("user-1", "AK19", "High");
+    expect(storedAlerts.get(Number(alertId))).toMatchObject({
+      userId: "user-1",
+      carParkNo: "AK19",
+      enabled: true,
+    });
   });
 
   it("ignores a body-supplied owner ID", async () => {
-    const response = await request(app)
+    await request(app)
       .post("/api/alerts")
       .set("Authorization", "Bearer user-1-token")
-      .send({
-        carParkNo: "AK19",
-        userId: "user-2",
-      });
+      .send({ carParkNo: "AK19", userId: "user-2" })
+      .expect(201);
 
-    expect(response.status).toBe(201);
-
-    expect(getEnabledAlerts()).toContainEqual(
-      expect.objectContaining({
-        id: Number(response.body.alertId),
-        userId: "user-1",
-      }),
-    );
+    expect(createAlert).toHaveBeenCalledWith("user-1", "AK19", "High");
   });
 
-  it("returns 404 for an unknown carpark", async () => {
+  it("returns 404 for missing availability", async () => {
     const response = await request(app)
       .post("/api/alerts")
       .set("Authorization", "Bearer user-1-token")
-      .send({ carParkNo: "ZZ99" });
+      .send({ carParkNo: "ZZ99" })
+      .expect(404);
 
-    expect(response.status).toBe(404);
     expect(response.body.error.code).toBe("NOT_FOUND");
+    expect(createAlert).not.toHaveBeenCalled();
   });
 
   it("allows the owner to disable an alert", async () => {
@@ -100,29 +123,34 @@ describe("availability alert routes", () => {
     const response = await request(app)
       .patch(`/api/alerts/${alertId}`)
       .set("Authorization", "Bearer user-1-token")
-      .send({ enabled: false });
+      .send({ enabled: false })
+      .expect(200);
 
-    expect(response.status).toBe(200);
     expect(response.body.enabled).toBe(false);
+    expect(setAlertEnabled).toHaveBeenCalledWith(
+      Number(alertId),
+      "user-1",
+      false,
+    );
+    expect(storedAlerts.get(Number(alertId))?.enabled).toBe(false);
   });
 
   it("allows the owner to re-enable an alert", async () => {
     const alertId = await createOwnedAlert();
 
-    const disabled = await request(app)
+    await request(app)
       .patch(`/api/alerts/${alertId}`)
       .set("Authorization", "Bearer user-1-token")
-      .send({ enabled: false });
+      .send({ enabled: false })
+      .expect(200);
 
-    expect(disabled.status).toBe(200);
-
-    const enabled = await request(app)
+    const response = await request(app)
       .patch(`/api/alerts/${alertId}`)
       .set("Authorization", "Bearer user-1-token")
-      .send({ enabled: true });
+      .send({ enabled: true })
+      .expect(200);
 
-    expect(enabled.status).toBe(200);
-    expect(enabled.body.enabled).toBe(true);
+    expect(response.body.enabled).toBe(true);
   });
 
   it("does not let another user disable an alert", async () => {
@@ -131,18 +159,16 @@ describe("availability alert routes", () => {
     const response = await request(app)
       .patch(`/api/alerts/${alertId}`)
       .set("Authorization", "Bearer user-2-token")
-      .send({ enabled: false });
+      .send({ enabled: false })
+      .expect(404);
 
-    expect(response.status).toBe(404);
     expect(response.body.error.code).toBe("NOT_FOUND");
-
-    expect(getEnabledAlerts()).toContainEqual(
-      expect.objectContaining({
-        id: Number(alertId),
-        userId: "user-1",
-        enabled: true,
-      }),
+    expect(setAlertEnabled).toHaveBeenCalledWith(
+      Number(alertId),
+      "user-2",
+      false,
     );
+    expect(storedAlerts.get(Number(alertId))?.enabled).toBe(true);
   });
 
   it.each([
@@ -156,18 +182,19 @@ describe("availability alert routes", () => {
     const response = await request(app)
       .post("/api/alerts")
       .set("Authorization", "Bearer user-1-token")
-      .send(body);
+      .send(body)
+      .expect(400);
 
-    expect(response.status).toBe(400);
     expect(response.body.error.code).toBe("VALIDATION_ERROR");
+    expect(createAlert).not.toHaveBeenCalled();
   });
 
   it("rejects POST without a body", async () => {
     const response = await request(app)
       .post("/api/alerts")
-      .set("Authorization", "Bearer user-1-token");
+      .set("Authorization", "Bearer user-1-token")
+      .expect(400);
 
-    expect(response.status).toBe(400);
     expect(response.body.error.code).toBe("VALIDATION_ERROR");
   });
 
@@ -175,22 +202,24 @@ describe("availability alert routes", () => {
     const response = await request(app)
       .post("/api/alerts")
       .set("Authorization", "Bearer user-1-token")
-      .send({ carParkNo: " AK19 " });
+      .send({ carParkNo: " AK19 " })
+      .expect(201);
 
-    expect(response.status).toBe(201);
     expect(response.body.carParkNo).toBe("AK19");
+    expect(getAvailabilityByCarParkNo).toHaveBeenCalledWith("AK19");
   });
 
-  it.each(["0", "-1", "1.5", "abc", "1e2", "9007199254740992"])(
+  it.each(["0", "-1", "1.5", "abc", "1e2", "2147483648", "9007199254740992"])(
     "rejects invalid alert id %s",
     async (id) => {
       const response = await request(app)
         .patch(`/api/alerts/${id}`)
         .set("Authorization", "Bearer user-1-token")
-        .send({ enabled: false });
+        .send({ enabled: false })
+        .expect(400);
 
-      expect(response.status).toBe(400);
       expect(response.body.error.code).toBe("VALIDATION_ERROR");
+      expect(setAlertEnabled).not.toHaveBeenCalled();
     },
   );
 
@@ -200,9 +229,9 @@ describe("availability alert routes", () => {
       const response = await request(app)
         .patch("/api/alerts/1")
         .set("Authorization", "Bearer user-1-token")
-        .send(body);
+        .send(body)
+        .expect(400);
 
-      expect(response.status).toBe(400);
       expect(response.body.error.code).toBe("VALIDATION_ERROR");
     },
   );
@@ -210,9 +239,9 @@ describe("availability alert routes", () => {
   it("rejects PATCH without a body", async () => {
     const response = await request(app)
       .patch("/api/alerts/1")
-      .set("Authorization", "Bearer user-1-token");
+      .set("Authorization", "Bearer user-1-token")
+      .expect(400);
 
-    expect(response.status).toBe(400);
     expect(response.body.error.code).toBe("VALIDATION_ERROR");
   });
 
@@ -220,67 +249,103 @@ describe("availability alert routes", () => {
     const response = await request(app)
       .patch("/api/alerts/2147483647")
       .set("Authorization", "Bearer user-1-token")
-      .send({ enabled: false });
+      .send({ enabled: false })
+      .expect(404);
 
-    expect(response.status).toBe(404);
     expect(response.body.error.code).toBe("NOT_FOUND");
   });
 
-  it("rejects POST without authorization", async () => {
-    const response = await request(app)
-      .post("/api/alerts")
-      .send({ carParkNo: "AK19" });
+  it.each(["post", "patch"] as const)(
+    "rejects %s without authorization",
+    async (method) => {
+      const pending =
+        method === "post"
+          ? request(app).post("/api/alerts")
+          : request(app).patch("/api/alerts/1");
 
-    expect(response.status).toBe(401);
-    expect(response.body.error.code).toBe("UNAUTHORIZED");
-    expect(verifyToken).not.toHaveBeenCalled();
-  });
+      const response = await pending
+        .send(method === "post" ? { carParkNo: "AK19" } : { enabled: false })
+        .expect(401);
 
-  it("rejects PATCH without authorization", async () => {
-    const response = await request(app)
-      .patch("/api/alerts/1")
-      .send({ enabled: false });
-
-    expect(response.status).toBe(401);
-    expect(response.body.error.code).toBe("UNAUTHORIZED");
-    expect(verifyToken).not.toHaveBeenCalled();
-  });
-
-  it.each(["Basic user-1-token", "Bearer", "Bearer token extra"])(
-    "rejects malformed authorization %s",
-    async (header) => {
-      const response = await request(app)
-        .post("/api/alerts")
-        .set("Authorization", header)
-        .send({ carParkNo: "AK19" });
-
-      expect(response.status).toBe(401);
       expect(response.body.error.code).toBe("UNAUTHORIZED");
       expect(verifyToken).not.toHaveBeenCalled();
+      expect(createAlert).not.toHaveBeenCalled();
+      expect(setAlertEnabled).not.toHaveBeenCalled();
     },
   );
+
+  it.each([
+    "Basic user-1-token",
+    "Bearer",
+    "Bearer token extra",
+    "Bearer token,other",
+    "Bearer  user-1-token",
+  ])("rejects malformed authorization %s", async (header) => {
+    const response = await request(app)
+      .post("/api/alerts")
+      .set("Authorization", header)
+      .send({ carParkNo: "AK19" })
+      .expect(401);
+
+    expect(response.body.error.code).toBe("UNAUTHORIZED");
+    expect(verifyToken).not.toHaveBeenCalled();
+  });
 
   it("rejects an invalid token", async () => {
     const response = await request(app)
       .post("/api/alerts")
       .set("Authorization", "Bearer invalid-token")
-      .send({ carParkNo: "AK19" });
+      .send({ carParkNo: "AK19" })
+      .expect(401);
 
-    expect(response.status).toBe(401);
     expect(response.body.error.code).toBe("UNAUTHORIZED");
   });
 
-  it("returns 503 when token verification is unavailable", async () => {
+  it("returns 503 when token verification fails", async () => {
     verifyToken.mockRejectedValueOnce(
-      new Error("Authentication service unavailable"),
+      new Error("Private authentication error"),
     );
 
     const response = await request(app)
       .post("/api/alerts")
       .set("Authorization", "Bearer user-1-token")
-      .send({ carParkNo: "AK19" });
+      .send({ carParkNo: "AK19" })
+      .expect(503);
 
-    expect(response.status).toBe(503);
     expect(response.body.error.code).toBe("EXTERNAL_SERVICE_UNAVAILABLE");
   });
+
+  it.each(["availability", "create", "patch"] as const)(
+    "hides database errors during %s",
+    async (operation) => {
+      const failure = new Error("Private database error");
+
+      if (operation === "availability") {
+        getAvailabilityByCarParkNo.mockRejectedValueOnce(failure);
+      } else if (operation === "create") {
+        createAlert.mockRejectedValueOnce(failure);
+      } else {
+        setAlertEnabled.mockRejectedValueOnce(failure);
+      }
+
+      const pending =
+        operation === "patch"
+          ? request(app).patch("/api/alerts/1")
+          : request(app).post("/api/alerts");
+
+      const response = await pending
+        .set("Authorization", "Bearer user-1-token")
+        .send(
+          operation === "patch" ? { enabled: false } : { carParkNo: "AK19" },
+        )
+        .expect(503);
+
+      expect(response.body).toEqual({
+        error: {
+          code: "EXTERNAL_SERVICE_UNAVAILABLE",
+          message: "Alerts service unavailable",
+        },
+      });
+    },
+  );
 });

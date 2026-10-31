@@ -176,3 +176,117 @@ describe("combined availability sources", () => {
     );
   });
 });
+
+describe("automatic HDB LTA matching", () => {
+  const freshTimestamp = new Date(timestamp.getTime() + 1_000);
+
+  const hdbRecord: LtaAvailabilityRecord = {
+    ...ltaRecord,
+    agency: "HDB",
+    externalId: "AK19",
+    retrievedAt: freshTimestamp,
+  };
+
+  const expectedRecord: RawAvailabilityRecord = {
+    carParkNo: "AK19",
+    availableLots: 30,
+    totalLots: 100,
+    fetchedAt: freshTimestamp,
+  };
+
+  beforeEach(() => {
+    vi.resetAllMocks();
+    vi.mocked(fetchCarparkAvailability).mockResolvedValue([dataGovRecord]);
+    vi.mocked(fetchLtaAvailability).mockResolvedValue([hdbRecord]);
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("matches HDB IDs using data.gov.sg capacities", async () => {
+    const fetchLatest = createAvailabilityFetcher({
+      accountKey: "test-key",
+    });
+
+    expect(await fetchLatest()).toEqual([expectedRecord]);
+  });
+
+  it("uses saved capacities when data.gov.sg fails on startup", async () => {
+    vi.mocked(fetchCarparkAvailability).mockRejectedValueOnce(
+      new Error("Source unavailable"),
+    );
+
+    const fetchLatest = createAvailabilityFetcher({
+      accountKey: "test-key",
+      loadHdbCapacities: async () => new Map([["AK19", 100]]),
+    });
+
+    expect(await fetchLatest()).toEqual([expectedRecord]);
+  });
+
+  it("uses fresh capacities instead of older saved values", async () => {
+    vi.mocked(fetchCarparkAvailability).mockResolvedValue([
+      { ...dataGovRecord, totalLots: 200 },
+    ]);
+
+    vi.mocked(fetchLtaAvailability).mockResolvedValue([
+      { ...hdbRecord, availableLots: 150 },
+    ]);
+
+    const fetchLatest = createAvailabilityFetcher({
+      accountKey: "test-key",
+      loadHdbCapacities: async () => new Map([["AK19", 100]]),
+    });
+
+    expect(await fetchLatest()).toEqual([
+      { ...expectedRecord, availableLots: 150, totalLots: 200 },
+    ]);
+  });
+
+  it("removes an old capacity when data.gov.sg reports zero capacity", async () => {
+    const zeroCapacity = {
+      ...dataGovRecord,
+      availableLots: 0,
+      totalLots: 0,
+    };
+
+    vi.mocked(fetchCarparkAvailability).mockResolvedValue([zeroCapacity]);
+    vi.mocked(fetchLtaAvailability).mockResolvedValue([
+      { ...hdbRecord, availableLots: 0 },
+    ]);
+
+    const fetchLatest = createAvailabilityFetcher({
+      accountKey: "test-key",
+      loadHdbCapacities: async () => new Map([["AK19", 100]]),
+    });
+
+    expect(await fetchLatest()).toEqual([zeroCapacity]);
+  });
+
+  it("excludes unknown HDB IDs and unmapped LTA or URA records", async () => {
+    vi.mocked(fetchLtaAvailability).mockResolvedValue([
+      { ...hdbRecord, externalId: "UNKNOWN" },
+      { ...hdbRecord, agency: "LTA" },
+      { ...hdbRecord, agency: "URA" },
+    ]);
+
+    const fetchLatest = createAvailabilityFetcher({
+      accountKey: "test-key",
+    });
+
+    expect(await fetchLatest()).toEqual([dataGovRecord]);
+  });
+
+  it("continues with fresh source capacities if the cache lookup fails", async () => {
+    const fetchLatest = createAvailabilityFetcher({
+      accountKey: "test-key",
+      loadHdbCapacities: async () => {
+        throw new Error("Database unavailable");
+      },
+    });
+
+    expect(await fetchLatest()).toEqual([expectedRecord]);
+  });
+});

@@ -16,6 +16,7 @@ interface NavigationMapProps {
   isSheetVisible?: boolean;
   showCarparksList?: boolean;
   onGetCurrentLocation: () => void;
+  isSimulating?: boolean;
 }
 
 export function NavigationMap({
@@ -29,6 +30,7 @@ export function NavigationMap({
   isSheetVisible = true,
   showCarparksList = false,
   onGetCurrentLocation,
+  isSimulating = false,
 }: NavigationMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
@@ -127,7 +129,9 @@ export function NavigationMap({
   //synchronise driving route path with polyline
   useEffect(() => {
     if (drivingPolylineRef.current) {
-      drivingPolylineRef.current.setPath(isSheetVisible && drivingPath ? drivingPath : []);
+      const path = isSheetVisible && drivingPath && (drivingPath as unknown[]).length > 0 ? drivingPath : [];
+      drivingPolylineRef.current.setPath(path);
+      drivingPolylineRef.current.setVisible(path.length > 0);
     }
   }, [drivingPath, isSheetVisible]);
 
@@ -171,7 +175,11 @@ export function NavigationMap({
         const isValidCoord = (c?: { lat?: number; lng?: number } | null): c is { lat: number; lng: number } =>
           typeof c?.lat === 'number' && !isNaN(c.lat) && typeof c?.lng === 'number' && !isNaN(c.lng);
 
-        if (isSheetVisible && isValidCoord(origin) && isValidCoord(carpark) && isValidCoord(destination)) {
+        if (isSimulating && isValidCoord(origin)) {
+          // During simulation: follow the marker at a fixed zoom so polyline trimming is visible
+          mapInstanceRef.current.setCenter({ lat: origin.lat, lng: origin.lng });
+          mapInstanceRef.current.setZoom(16);
+        } else if (isSheetVisible && isValidCoord(origin) && isValidCoord(carpark) && isValidCoord(destination)) {
           const lats = [origin.lat, carpark.lat, destination.lat];
           const lngs = [origin.lng, carpark.lng, destination.lng];
           mapInstanceRef.current.fitBounds({
@@ -202,7 +210,7 @@ export function NavigationMap({
         console.warn('Map fitBounds warning:', err);
       }
     }
-  }, [origin, carpark, destination, isSheetVisible, showCarparksList]);
+  }, [origin, carpark, destination, isSheetVisible, showCarparksList, isSimulating]);
 
   return (
     <>

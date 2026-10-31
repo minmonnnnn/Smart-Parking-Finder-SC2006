@@ -72,7 +72,7 @@ function Monitor({ carParkNo }: AvailabilityAlertMonitorProps) {
           previousStatus !== null && previousStatus !== availability.status;
 
         const message = changed
-          ? `${carParkNo} availability changed from ${previousStatus} to ${availability.status}. ${availability.availableLots} of ${availability.totalLots} lots available.`
+          ? `Navigating carpark availability changed from ${previousStatus} to ${availability.status}. ${availability.availableLots} of ${availability.totalLots} lots available.`
           : null;
 
         previousStatus = availability.status;
@@ -117,9 +117,7 @@ function Monitor({ carParkNo }: AvailabilityAlertMonitorProps) {
       const available =
         detail?.availableLots ??
         (to === "High" ? 48 : to === "Moderate" ? 24 : 5);
-      const msg =
-        detail?.message ??
-        `${carParkNo} availability changed from ${from} to ${to}. ${available} of ${total} lots available.`;
+      const msg = detail?.message ?? `Navigating carpark availability changed from ${from} to ${to}. ${available} of ${total} lots available.`;
 
       previousStatus = to;
       console.log(

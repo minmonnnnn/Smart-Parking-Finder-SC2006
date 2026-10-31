@@ -124,7 +124,7 @@ function AppShell() {
               }
               openCarparkDetail(favourite.address || favourite.locationName, initial)
             }}
-            onSearch={() => navigate('search')}
+            onSearch={() => navigate('navigation')}
             onNavigate={navigate}
             onLogout={logout}
           />

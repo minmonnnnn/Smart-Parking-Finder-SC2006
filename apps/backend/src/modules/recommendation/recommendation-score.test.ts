@@ -134,4 +134,46 @@ describe('calculateRecommendationScore', () => {
       'realTimeAvailabilityRatio is required to calculate a recommendation score',
     );
   });
+
+  it('scores the walking distance immediately below 800 metres', () => {
+    const result = calculateRecommendationScore({
+      realTimeAvailabilityRatio: 0,
+      historicalAvailabilityRatio: null,
+      etaMinutes: 15,
+      walkingDistanceMeters: 799,
+      rainExpected: false,
+      isSheltered: false,
+    });
+
+    expect(result.availabilityScore).toBe(0);
+    expect(result.walkingScore).toBeCloseTo(0.00125);
+    expect(result.finalScore).toBeCloseTo(0.0005);
+  });
+
+  it('accepts ratio one as the maximum availability score without history', () => {
+    const result = calculateRecommendationScore({
+      realTimeAvailabilityRatio: 1,
+      historicalAvailabilityRatio: null,
+      etaMinutes: 0,
+      walkingDistanceMeters: 800,
+      rainExpected: false,
+      isSheltered: false,
+    });
+
+    expect(result).toEqual({ availabilityScore: 1, walkingScore: 0, baseScore: 0.6, finalScore: 0.6 });
+  });
+
+  it('documents that negative ETA is currently accepted rather than rejected', () => {
+    const result = calculateRecommendationScore({
+      realTimeAvailabilityRatio: 0.8,
+      historicalAvailabilityRatio: 0.4,
+      etaMinutes: -15,
+      walkingDistanceMeters: 400,
+      rainExpected: false,
+      isSheltered: false,
+    });
+
+    expect(result.availabilityScore).toBeCloseTo(1.2);
+    expect(result.finalScore).toBeCloseTo(0.92);
+  });
 });

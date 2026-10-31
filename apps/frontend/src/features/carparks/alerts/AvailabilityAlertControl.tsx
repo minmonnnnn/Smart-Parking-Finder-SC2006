@@ -1,8 +1,6 @@
-import { useEffect, useRef, useState } from "react";
 import { vars } from "../../../components";
 import { AvailabilityAlertToggle } from "./AvailabilityAlertToggle";
-import { createAvailabilityAlert, updateAvailabilityAlert } from "./api";
-import { AvailabilityAlertMonitor } from "./AvailabilityAlertMonitor";
+import { useAvailabilityAlerts } from "./AvailabilityAlertsProvider";
 
 interface AvailabilityAlertControlProps {
   carParkNo: string;
@@ -15,98 +13,26 @@ export function AvailabilityAlertControl({
   userId,
   accessToken,
 }: AvailabilityAlertControlProps) {
-  if (!userId || !accessToken) {
+  const alerts = useAvailabilityAlerts();
+
+  if (!userId || !accessToken || alerts.userId !== userId) {
     return (
-      <div
+      <p
         style={{
           marginTop: vars.space[3],
-          padding: `${vars.space[2]} ${vars.space[3]}`,
-          background: vars.color.surface,
-          borderRadius: vars.radius.md,
-          border: `1px solid ${vars.color.border}`,
           fontSize: vars.fontSize.xs,
           color: vars.color.textSecondary,
         }}
       >
-        <p style={{ margin: 0 }}>Sign in to enable availability alerts.</p>
-      </div>
+        Sign in to enable availability alerts.
+      </p>
     );
   }
 
-  return (
-    <SubscriptionControl
-      key={JSON.stringify([userId, carParkNo])}
-      carParkNo={carParkNo}
-      accessToken={accessToken}
-    />
-  );
-}
-
-interface SubscriptionControlProps {
-  carParkNo: string;
-  accessToken: string;
-}
-
-function SubscriptionControl({
-  carParkNo,
-  accessToken,
-}: SubscriptionControlProps) {
-  const [alertId, setAlertId] = useState<string | null>(null);
-  const [enabled, setEnabled] = useState(false);
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const inFlight = useRef(false);
-  const active = useRef(false);
-
-  useEffect(() => {
-    active.current = true;
-
-    return () => {
-      active.current = false;
-    };
-  }, []);
-
-  async function toggle(nextEnabled: boolean) {
-    if (inFlight.current) return;
-
-    inFlight.current = true;
-    setPending(true);
-    setError(null);
-
-    try {
-      if (alertId) {
-        await updateAvailabilityAlert(alertId, nextEnabled, accessToken);
-      } else if (nextEnabled) {
-        const subscription = await createAvailabilityAlert(
-          carParkNo,
-          accessToken,
-        );
-
-        if (active.current) {
-          setAlertId(subscription.alertId);
-        }
-      }
-
-      if (active.current) {
-        setEnabled(nextEnabled);
-      }
-    } catch (err) {
-      if (active.current) {
-        const msg =
-          err instanceof Error && err.message !== "Request failed"
-            ? err.message
-            : "Unable to update availability alerts";
-        setError(msg);
-      }
-    } finally {
-      inFlight.current = false;
-
-      if (active.current) {
-        setPending(false);
-      }
-    }
-  }
+  const subscription = alerts.subscriptions.get(carParkNo);
+  const enabled = subscription?.enabled ?? false;
+  const pending = subscription?.pending ?? false;
+  const error = subscription?.error ?? null;
 
   return (
     <div
@@ -120,11 +46,7 @@ function SubscriptionControl({
     >
       <fieldset
         disabled={pending}
-        style={{
-          border: "none",
-          padding: 0,
-          margin: 0,
-        }}
+        style={{ border: "none", padding: 0, margin: 0 }}
       >
         <legend
           style={{
@@ -142,12 +64,10 @@ function SubscriptionControl({
         <AvailabilityAlertToggle
           enabled={enabled}
           onToggle={(nextEnabled) => {
-            void toggle(nextEnabled);
+            void alerts.setEnabled(carParkNo, nextEnabled);
           }}
         />
       </fieldset>
-
-      {enabled && <AvailabilityAlertMonitor carParkNo={carParkNo} />}
 
       {pending && (
         <p
@@ -161,6 +81,7 @@ function SubscriptionControl({
           Updating alert...
         </p>
       )}
+
       {error && (
         <p
           role="alert"

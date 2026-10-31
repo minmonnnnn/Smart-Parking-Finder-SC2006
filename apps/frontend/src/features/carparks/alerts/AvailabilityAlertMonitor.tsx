@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchAvailability, type AvailabilityInfo } from "../availability/api";
+import { Button, vars } from "../../../components";
 
 interface AvailabilityAlertMonitorProps {
   carParkNo: string;
@@ -89,10 +90,42 @@ function Monitor({ carParkNo }: AvailabilityAlertMonitorProps) {
     };
   }, [carParkNo]);
 
+  if (!state.message && !state.error) return null;
+
   return (
-    <div>
-      {state.message && <p role="status">{state.message}</p>}
-      {state.error && <p role="alert">{state.error}</p>}
+    <div
+      style={{
+        padding: vars.space[3],
+        background: vars.color.background,
+        color: vars.color.textPrimary,
+        border: `1px solid ${vars.color.border}`,
+        borderRadius: vars.radius.md,
+        boxShadow: vars.shadow.raised,
+        fontFamily: vars.font.family,
+        fontSize: vars.fontSize.sm,
+        pointerEvents: "auto",
+      }}
+    >
+      {state.message && (
+        <p role="status" style={{ margin: 0 }}>
+          {state.message}
+        </p>
+      )}
+
+      {state.error && (
+        <p role="alert" style={{ margin: 0, color: vars.color.danger }}>
+          {state.error}
+        </p>
+      )}
+
+      <Button
+        variant="ghost"
+        size="sm"
+        aria-label={`Dismiss availability notification for ${carParkNo}`}
+        onClick={() => setState({ message: null, error: null })}
+      >
+        Dismiss
+      </Button>
     </div>
   );
 }

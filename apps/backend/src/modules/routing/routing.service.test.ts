@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calculateDistanceKm, getDrivingRoute, getWalkingRoute } from './routing.service.js';
+import { calculateDistanceKm, classifyTraffic, getDrivingRoute, getWalkingRoute } from './routing.service.js';
 import { hasNearbyIncidents, type LtaTrafficIncident } from './lta-traffic.service.js';
 
 describe('calculateDistanceKm', () => {
@@ -52,6 +52,55 @@ describe('hasNearbyIncidents', () => {
       },
     ];
     expect(hasNearbyIncidents(incidents, originLat, originLng, destLat, destLng)).toBe(false);
+  });
+});
+
+describe('classifyTraffic', () => {
+  const dummyOriginLat = 1.3500;
+  const dummyOriginLng = 103.8300;
+  const dummyDestLat = 1.3550;
+  const dummyDestLng = 103.8350;
+
+  it('classifies local short routes (< 3km) accurately based on estate driving speeds', async () => {
+    // 1 km in 5 mins (12 km/h) -> Moderate (normal residential estate with traffic lights)
+    const trafficNormal = await classifyTraffic(1.0, 5, dummyOriginLat, dummyOriginLng, dummyDestLat, dummyDestLng);
+    expect(trafficNormal).toBe('Moderate');
+
+    // 1 km in 3 mins (20 km/h) -> Light (smooth estate driving)
+    const trafficSmooth = await classifyTraffic(1.0, 3, dummyOriginLat, dummyOriginLng, dummyDestLat, dummyDestLng);
+    expect(trafficSmooth).toBe('Light');
+
+    // 1 km in 10 mins (6 km/h) -> Heavy (crawling traffic jam)
+    const trafficHeavy = await classifyTraffic(1.0, 10, dummyOriginLat, dummyOriginLng, dummyDestLat, dummyDestLng);
+    expect(trafficHeavy).toBe('Heavy');
+  });
+
+  it('classifies traffic using delayRatio when Google Routes staticDuration is available', async () => {
+    // delayRatio 1.05 (< 1.15) -> Light
+    const lightDelay = await classifyTraffic(1.0, 5, dummyOriginLat, dummyOriginLng, dummyDestLat, dummyDestLng, 1.05);
+    expect(lightDelay).toBe('Light');
+
+    // delayRatio 1.25 (1.15 - 1.35) -> Moderate
+    const moderateDelay = await classifyTraffic(1.0, 5, dummyOriginLat, dummyOriginLng, dummyDestLat, dummyDestLng, 1.25);
+    expect(moderateDelay).toBe('Moderate');
+
+    // delayRatio 1.50 (> 1.35) -> Heavy
+    const heavyDelay = await classifyTraffic(1.0, 5, dummyOriginLat, dummyOriginLng, dummyDestLat, dummyDestLng, 1.50);
+    expect(heavyDelay).toBe('Heavy');
+  });
+
+  it('classifies longer routes (>= 3km) using arterial/highway thresholds', async () => {
+    // 10 km in 12 mins (50 km/h) -> Light
+    const lightHwy = await classifyTraffic(10.0, 12, dummyOriginLat, dummyOriginLng, dummyDestLat, dummyDestLng);
+    expect(lightHwy).toBe('Light');
+
+    // 10 km in 20 mins (30 km/h) -> Moderate
+    const modHwy = await classifyTraffic(10.0, 20, dummyOriginLat, dummyOriginLng, dummyDestLat, dummyDestLng);
+    expect(modHwy).toBe('Moderate');
+
+    // 10 km in 40 mins (15 km/h) -> Heavy
+    const heavyHwy = await classifyTraffic(10.0, 40, dummyOriginLat, dummyOriginLng, dummyDestLat, dummyDestLng);
+    expect(heavyHwy).toBe('Heavy');
   });
 });
 

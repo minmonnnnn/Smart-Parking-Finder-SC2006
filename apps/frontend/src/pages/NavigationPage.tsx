@@ -25,8 +25,6 @@ import { MobileHeader } from "../components/MobileHeader";
 import { useWeather } from "../features/navigation/hooks/weather";
 import {
   SAMPLE_ORIGIN,
-  DEFAULT_CARPARK,
-  DEFAULT_DESTINATION,
   POPULAR_DESTINATIONS,
   POPULAR_CARPARKS,
 } from "../features/navigation/constants";
@@ -52,7 +50,7 @@ export function NavigationPage({
           initialCarparkDetails.carpark.carParkNo,
         availableLots: initialCarparkDetails.availability.availableLots,
       }
-    : DEFAULT_CARPARK;
+    : null;
 
   const [originLocation, setOriginLocation] = useState(SAMPLE_ORIGIN);
   const originLocationRef = useRef(originLocation);
@@ -63,9 +61,14 @@ export function NavigationPage({
   const isSimulatingRef = useRef(false);
   const [isSimulating, setIsSimulating] = useState(false);
   const [simulatedOrigin, setSimulatedOrigin] = useState<typeof SAMPLE_ORIGIN | null>(null);
-  const [carparkLocation, setCarparkLocation] = useState(initialCp);
+  const [carparkLocation, setCarparkLocation] = useState<{
+    lat: number;
+    lng: number;
+    name: string;
+    availableLots?: number;
+  } | null>(initialCp);
   const [destinationLocation, setDestinationLocation] =
-    useState<NavDestination>(
+    useState<NavDestination | null>(
       initialCarparkDetails
         ? {
             placeId: initialCarparkDetails.carpark.carParkNo,
@@ -79,7 +82,7 @@ export function NavigationPage({
             lat: initialCarparkDetails.carpark.latitude,
             lng: initialCarparkDetails.carpark.longitude,
           }
-        : DEFAULT_DESTINATION,
+        : null,
     );
 
   //maps const
@@ -247,6 +250,7 @@ interface NavigationTestWindow {
     origin: originLocation,
     carpark: carparkLocation,
     destination: destinationLocation,
+    enabled: isSheetVisible,
   });
 
   const activeDrivingRouteRef = useRef(activeDrivingRoute);
@@ -367,11 +371,11 @@ interface NavigationTestWindow {
 
   //live weather
   const { weather: liveWeather } = useWeather({
-    lat: destinationLocation.lat,
-    lng: destinationLocation.lng,
+    lat: destinationLocation?.lat,
+    lng: destinationLocation?.lng,
   });
 
-  //gps current location as destination
+  // GPS current location as destination (used by SearchBar dropdown)
   const handleGetCurrentLocation = () => {
     setIsLocating(true);
 
@@ -428,7 +432,7 @@ interface NavigationTestWindow {
         setSearchQuery("");
 
         setDestinationLocation({
-          placeId: "current-location-fallback",
+          placeId: "current-location",
           main: name,
           sub: "NTU Campus Demo",
           name,
@@ -439,145 +443,210 @@ interface NavigationTestWindow {
         void fetchNearbyCarparks(lat, lng);
         setIsLocating(false);
       },
-      { enableHighAccuracy: true, timeout: 8000 },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 10000,
+      },
     );
   };
 
-  //live search
+  // Updates current device location (Point A) on the map without starting a search (used by floating map button)
+  const handleUpdateCurrentLocation = () => {
+    setIsLocating(true);
+
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by your browser.");
+      setIsLocating(false);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const rawLat = position.coords.latitude;
+        const rawLng = position.coords.longitude;
+        const inSingapore =
+          rawLat >= 1.15 &&
+          rawLat <= 1.48 &&
+          rawLng >= 103.55 &&
+          rawLng <= 104.05;
+        const lat = inSingapore ? rawLat : 1.3483;
+        const lng = inSingapore ? rawLng : 103.6831;
+        const name = inSingapore
+          ? "My Current Location"
+          : "Current Location (NTU Campus)";
+
+        setOriginLocation({ lat, lng, name });
+        setIsLocating(false);
+      },
+      (error) => {
+        console.warn(
+          "Geolocation unavailable/blocked, using NTU campus demo location:",
+          error.message,
+        );
+        const lat = 1.3483;
+        const lng = 103.6831;
+        const name = "Current Location (NTU Campus)";
+
+        setOriginLocation({ lat, lng, name });
+        setIsLocating(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 5000,
+      },
+    );
+  };
+
+  //search suggestions
   useEffect(() => {
+    let cancelled = false;
+
     if (!searchQuery.trim()) {
-      const resetTimer = setTimeout(() => {
-        setSuggestions(POPULAR_DESTINATIONS);
-      }, 0);
-      return () => clearTimeout(resetTimer);
+      setSuggestions(POPULAR_DESTINATIONS);
+      setIsSearching(false);
+      return;
     }
 
     const timer = setTimeout(async () => {
       setIsSearching(true);
       try {
-        let items: PlaceItem[] = [];
-
-        try {
-          const data = await searchDestinations(searchQuery);
-          if (Array.isArray(data) && data.length > 0) {
-            items = data.map((item) => ({
-              placeId: item.placeId,
-              main: item.name,
-              sub: item.address || "Singapore",
-              name: item.name,
-            }));
+        const results = await searchDestinations(searchQuery);
+        if (!cancelled) {
+          if (results.length > 0) {
+            setSuggestions(
+              results.map((r) => ({
+                placeId: r.placeId,
+                main: r.name,
+                sub: r.address || "Singapore",
+                name: r.name,
+              }))
+            );
+          } else {
+            const lower = searchQuery.toLowerCase();
+            const fallback = POPULAR_DESTINATIONS.filter(
+              (p) =>
+                p.main.toLowerCase().includes(lower) ||
+                p.sub.toLowerCase().includes(lower),
+            );
+            setSuggestions(fallback);
           }
-        } catch {
-          // Fall through to POPULAR_DESTINATIONS fallback
         }
-
-        if (items.length > 0) {
-          setSuggestions(items);
-        } else {
-          const matches = POPULAR_DESTINATIONS.filter((d) =>
-            d.main.toLowerCase().includes(searchQuery.toLowerCase()),
+      } catch (err) {
+        console.warn("Autocomplete search failed, using fallback:", err);
+        if (!cancelled) {
+          const lower = searchQuery.toLowerCase();
+          const fallback = POPULAR_DESTINATIONS.filter(
+            (p) =>
+              p.main.toLowerCase().includes(lower) ||
+              p.sub.toLowerCase().includes(lower),
           );
-          setSuggestions(matches);
+          setSuggestions(fallback);
         }
       } finally {
-        setIsSearching(false);
+        if (!cancelled) {
+          setIsSearching(false);
+        }
       }
-    }, 280);
+    }, 300);
 
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [searchQuery]);
 
-  //get recommended carparks from recommendation
+  //fetch nearby carparks
   const fetchNearbyCarparks = useCallback(
-    async (destLat: number, destLng: number) => {
+    async (lat?: number, lng?: number) => {
+      const destLat = lat ?? destinationLocation?.lat;
+      const destLng = lng ?? destinationLocation?.lng;
+      if (destLat === undefined || destLng === undefined) return;
+
       setIsLoadingCarparks(true);
-      setShowCarparksList(true);
+
+      const filters = {
+        evChargingOnly: evFilter === "yes" ? true : undefined,
+        shelteredOnly: shelteredFilter === "yes" ? true : undefined,
+      };
+
       try {
-        const data = await getNearbyCarparks({
+        const origin = originLocationRef.current;
+        const results = await getNearbyCarparks({
           destinationLat: destLat,
           destinationLng: destLng,
-          originLat: originLocationRef.current.lat,
-          originLng: originLocationRef.current.lng,
-          sort: "recommended",
-          filters: {
-            ...(evFilter === "yes" ? { evChargingOnly: true } : {}),
-            ...(shelteredFilter === "yes" ? { shelteredOnly: true } : {}),
-          },
+          originLat: origin.lat,
+          originLng: origin.lng,
+          filters,
         });
 
-        const carparks = data.carparks || [];
+        const carparks = results.carparks || [];
         if (carparks.length > 0) {
           let cardItems = carparks.map(toCarparkCardData).filter((cp) => cp.availableLots > 0);
 
-          if (evFilter === "no") {
-            cardItems = cardItems.filter((cp) => !cp.hasEvCharging);
-          }
-          if (shelteredFilter === "no") {
-            cardItems = cardItems.filter((cp) => !cp.isSheltered);
-          }
           setRecommendedCarparks(cardItems);
           setIsLoadingCarparks(false);
           return;
         }
-      } catch {
-        //do nth
+      } catch (err) {
+        console.warn(
+          "Orchestrator nearby search failed, using distance-based fallback:",
+          err,
+        );
       }
 
-      //dummy data fallback
+      //fallback to popular carparks
       let fallbackItems: CarparkCardData[] = POPULAR_CARPARKS.filter(
-        (cp): cp is PlaceItem & { lat: number; lng: number } =>
-          typeof cp.lat === "number" && typeof cp.lng === "number",
-      )
-        .map((cp, idx): CarparkCardData => {
-          const dist = Math.round(
-            Math.hypot(
-              (cp.lat - destLat) * 111000,
-              (cp.lng - destLng) * 111000,
-            ),
-          );
-          return {
-            carParkNo: cp.placeId || cp.main,
-            name: cp.main,
-            distanceMeters: dist,
-            walkingEtaMinutes: Math.max(
-              1,
-              Math.round(dist / WALKING_SPEED_M_PER_MIN),
-            ),
-            availableLots: cp.availableLots ?? 42,
-            totalLots: 120,
-            isSheltered: true,
-            hasEvCharging: idx % 2 === 0,
-            parkingCost: 0.6,
-            carparkType: "Multi-storey",
-            latitude: cp.lat,
-            longitude: cp.lng,
-          };
-        })
-        .sort((a, b) => (b.recommendationScore ?? 0) - (a.recommendationScore ?? 0) || a.distanceMeters - b.distanceMeters);
+        (cp) => cp.lat !== undefined && cp.lng !== undefined,
+      ).map((cp) => {
+        const distanceKm = parseFloat(
+          calculateDistanceKm(destLat, destLng, cp.lat!, cp.lng!).toFixed(1),
+        );
+        const walkingMinutes = Math.max(
+          1,
+          Math.round((distanceKm * 1000) / WALKING_SPEED_M_PER_MIN),
+        );
 
-      fallbackItems = fallbackItems.filter((cp) => cp.availableLots > 0);
+        const isEvMatch = cp.main.toLowerCase().includes("junction 8") || cp.main.toLowerCase().includes("sin ming");
+        return {
+          carParkNo: cp.placeId || "CP-FALLBACK",
+          name: cp.main,
+          latitude: cp.lat!,
+          longitude: cp.lng!,
+          availableLots: cp.availableLots ?? 42,
+          totalLots: 120,
+          parkingCost: 0.6,
+          distanceMeters: Math.round(distanceKm * 1000),
+          walkingEtaMinutes: walkingMinutes,
+          isSheltered: true,
+          hasEvCharging: isEvMatch,
+          carparkType: "Multi-storey",
+        };
+      });
 
       if (evFilter === "yes") {
         fallbackItems = fallbackItems.filter((cp) => cp.hasEvCharging);
-      } else if (evFilter === "no") {
-        fallbackItems = fallbackItems.filter((cp) => !cp.hasEvCharging);
       }
-      if (shelteredFilter === "yes") {
-        fallbackItems = fallbackItems.filter((cp) => cp.isSheltered);
-      } else if (shelteredFilter === "no") {
-        fallbackItems = fallbackItems.filter((cp) => !cp.isSheltered);
-      }
+      fallbackItems = fallbackItems.filter((cp) => cp.availableLots > 0);
+
+      fallbackItems.sort((a, b) => (a.distanceMeters ?? 0) - (b.distanceMeters ?? 0));
       setRecommendedCarparks(fallbackItems);
       setIsLoadingCarparks(false);
     },
-    [evFilter, shelteredFilter],
+    [
+      destinationLocation?.lat,
+      destinationLocation?.lng,
+      evFilter,
+      shelteredFilter,
+    ],
   );
 
   //if filtering refetch carparks
   useEffect(() => {
     let cancelled = false;
-    const destLat = destinationLocation.lat;
-    const destLng = destinationLocation.lng;
+    const destLat = destinationLocation?.lat;
+    const destLng = destinationLocation?.lng;
     if (showCarparksList && destLat !== undefined && destLng !== undefined) {
       const timer = setTimeout(() => {
         if (!cancelled) {
@@ -591,8 +660,8 @@ interface NavigationTestWindow {
     }
   }, [
     showCarparksList,
-    destinationLocation.lat,
-    destinationLocation.lng,
+    destinationLocation?.lat,
+    destinationLocation?.lng,
     fetchNearbyCarparks,
   ]);
 
@@ -615,9 +684,11 @@ interface NavigationTestWindow {
     }
 
     if (lat !== undefined && lng !== undefined) {
+      setIsSearching(false);
       setIsSheetVisible(false);
       setShowCarparksList(true);
       setIsLoadingCarparks(true);
+      setSearchQuery(place.main || place.name || "");
 
       setDestinationLocation({
         ...place,
@@ -724,6 +795,8 @@ interface NavigationTestWindow {
     setShowCarparksList(false);
     setSelectedDetailCarparkNo(null);
     setSearchQuery("");
+    setCarparkLocation(null);
+    setDestinationLocation(null);
   };
 
   return (
@@ -751,7 +824,11 @@ interface NavigationTestWindow {
             availabilityDesc={availabilityDesc}
             onAvailabilityDesc={setAvailabilityDesc}
             onClearFilters={clearFilters}
-            placeholder={`Search destination (current: ${destinationLocation.main || destinationLocation.name || "Destination"})`}
+            placeholder={
+              destinationLocation
+                ? `Search destination (current: ${destinationLocation.main || destinationLocation.name || "Destination"})`
+                : "Search destination..."
+            }
             suggestions={suggestions}
             onSelectSuggestion={(place) => {
               handleSelectPlace(place);
@@ -773,7 +850,7 @@ interface NavigationTestWindow {
           isSheetCollapsed={isSheetCollapsed}
           isSheetVisible={isSheetVisible}
           showCarparksList={showCarparksList}
-          onGetCurrentLocation={handleGetCurrentLocation}
+          onGetCurrentLocation={handleUpdateCurrentLocation}
         />
 
         {/*carpark list*/}
@@ -785,7 +862,7 @@ interface NavigationTestWindow {
                 <span className={styles.recommendedCarparksCount}>
                   {isLoadingCarparks
                     ? "Finding carparks..."
-                    : `${recommendedCarparks.length} carparks near ${destinationLocation.name}`}
+                    : `${recommendedCarparks.length} carparks near ${destinationLocation?.name || "destination"}`}
                 </span>
               </div>
               <button
@@ -800,7 +877,7 @@ interface NavigationTestWindow {
             {isLoadingCarparks ? (
               <div className={styles.recommendedCarparksLoading}>
                 <span>
-                  Finding recommended carparks near {destinationLocation.name}
+                  Finding recommended carparks near {destinationLocation?.name || "destination"}
                   ...
                 </span>
               </div>
@@ -824,7 +901,7 @@ interface NavigationTestWindow {
         )}
 
         {/*bottom navigation nav*/}
-        {isSheetVisible && (
+        {isSheetVisible && carparkLocation && destinationLocation && (
           <NavigationBottomSheet
             origin={originLocation}
             carpark={carparkLocation}
@@ -840,7 +917,7 @@ interface NavigationTestWindow {
             }
             activeRouteIndex={activeRouteIndex}
             onSelectRoute={setActiveRouteIndex}
-            walkingInfo={walkingInfo}
+            walkingInfo={walkingInfo ?? undefined}
             isCalculating={isCalculatingRoute}
             isSheetCollapsed={isSheetCollapsed}
             onToggleCollapse={() => setIsSheetCollapsed((prev) => !prev)}
@@ -853,7 +930,7 @@ interface NavigationTestWindow {
 
 
       {/*arrived at carpark popup*/}
-      {hasArrived && (
+      {hasArrived && carparkLocation && (
         <div style={{
           position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
           justifyContent: 'center', zIndex: 200,
@@ -912,7 +989,7 @@ interface NavigationTestWindow {
       )}
 
       {/*arrived at destination popup*/}
-      {arrivedAtDestination && (
+      {arrivedAtDestination && destinationLocation && (
         <div style={{
           position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
           justifyContent: 'center', zIndex: 200,
@@ -948,7 +1025,7 @@ interface NavigationTestWindow {
         </div>
       )}
 
-      {/*carkpark details */}
+      {/*Carpark Detail Page overlay*/}
       {selectedDetailCarparkNo && (
         <CarparkDetailPage
           carParkNo={selectedDetailCarparkNo}
@@ -966,8 +1043,10 @@ interface NavigationTestWindow {
                 longitude: cp.longitude ?? 103.836,
                 carParkType:
                   (cp.carparkType as
-                    "Surface" | "Basement" | "Multi-storey" | "Covered") ||
-                  "Multi-storey",
+                    | "Surface"
+                    | "Basement"
+                    | "Multi-storey"
+                    | "Covered") || "Multi-storey",
                 isSheltered: cp.isSheltered ?? true,
                 totalLots: cp.totalLots,
                 freeParking: "SUN & PH FR 7AM-10.30PM",
@@ -1002,11 +1081,20 @@ interface NavigationTestWindow {
             } else {
               getCarparkDetails(selectedDetailCarparkNo)
                 .then((d) => {
+                  const cpName = d.carpark.address || d.carpark.carParkNo;
                   setCarparkLocation({
                     lat: d.carpark.latitude,
                     lng: d.carpark.longitude,
-                    name: d.carpark.address || d.carpark.carParkNo,
+                    name: cpName,
                     availableLots: d.availability.availableLots,
+                  });
+                  setDestinationLocation((prev) => prev || {
+                    placeId: d.carpark.carParkNo,
+                    main: cpName,
+                    sub: "Carpark Destination",
+                    name: cpName,
+                    lat: d.carpark.latitude,
+                    lng: d.carpark.longitude,
                   });
                   setIsSheetVisible(true);
                   setShowCarparksList(false);
@@ -1023,5 +1111,3 @@ interface NavigationTestWindow {
     </div>
   );
 }
-
-export default NavigationPage;

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+﻿import { useCallback, useEffect, useRef, useState } from "react";
 import styles from "./NavigationPage.module.css";
 import { NavigationMap } from "../features/navigation/components/NavigationMap";
 import { NavigationBottomSheet } from "../features/navigation/components/NavigationBottomSheet";
@@ -57,14 +57,16 @@ export function NavigationPage({
   useEffect(() => {
     originLocationRef.current = originLocation;
   }, [originLocation]);
-
+  const simulationTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const isSimulatingRef = useRef(false);
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [simulatedOrigin, setSimulatedOrigin] = useState<typeof SAMPLE_ORIGIN | null>(null);
   const [carparkLocation, setCarparkLocation] = useState<{
     lat: number;
     lng: number;
     name: string;
     availableLots?: number;
   } | null>(initialCp);
-
   const [destinationLocation, setDestinationLocation] =
     useState<NavDestination | null>(
       initialCarparkDetails
@@ -116,6 +118,7 @@ export function NavigationPage({
 
     const watchId = navigator.geolocation.watchPosition(
       (position) => {
+        if (isSimulatingRef.current) return;
         const rawLat = position.coords.latitude;
         const rawLng = position.coords.longitude;
         const inSingapore =
@@ -249,6 +252,122 @@ interface NavigationTestWindow {
     destination: destinationLocation,
     enabled: isSheetVisible,
   });
+
+  const activeDrivingRouteRef = useRef(activeDrivingRoute);
+  useEffect(() => {
+    activeDrivingRouteRef.current = activeDrivingRoute;
+  }, [activeDrivingRoute]);
+
+  const walkingInfoRef = useRef(walkingInfo);
+  useEffect(() => {
+    walkingInfoRef.current = walkingInfo;
+  }, [walkingInfo]);
+
+  const [hasArrived, setHasArrived] = useState(false);
+  const [arrivedAtDestination, setArrivedAtDestination] = useState(false);
+  const [drivingComplete, setDrivingComplete] = useState(false);
+  const [remainingDrivingPath, setRemainingDrivingPath] = useState<{ lat: number; lng: number }[] | null>(null);
+  const [remainingWalkingPath, setRemainingWalkingPath] = useState<{ lat: number; lng: number }[] | null>(null);
+  const [simulatedRemainingMinutes, setSimulatedRemainingMinutes] = useState<number | null>(null);
+
+  // Console helpers for demo/testing: simulate marker movement along the route
+  useEffect(() => {
+    function getLatLng(point: { lat: number; lng: number } | google.maps.LatLng) {
+      if (typeof (point as google.maps.LatLng).lat === 'function') {
+        const p = point as google.maps.LatLng;
+        return { lat: p.lat(), lng: p.lng() };
+      }
+      return point as { lat: number; lng: number };
+    }
+
+    function haversineMeters(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
+      const R = 6371000;
+      const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+      const dLng = ((b.lng - a.lng) * Math.PI) / 180;
+      const s =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos((a.lat * Math.PI) / 180) * Math.cos((b.lat * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s));
+    }
+
+    function runPathSimulation(
+      path: ({ lat: number; lng: number } | google.maps.LatLng)[],
+      speedMs: number,
+      onComplete: () => void,
+    ) {
+      simulationTimeoutsRef.current.forEach(clearTimeout);
+      simulationTimeoutsRef.current = [];
+      const plainPath = path.map((p) => getLatLng(p as { lat: number; lng: number } | google.maps.LatLng));
+      setRemainingDrivingPath(plainPath);
+
+      // Pre-compute cumulative delay for each point
+      const delays: number[] = [0];
+      for (let i = 0; i < plainPath.length - 1; i++) {
+        delays.push(delays[i]! + (haversineMeters(plainPath[i]!, plainPath[i + 1]!) / speedMs) * 1000);
+      }
+      const totalMs = delays[delays.length - 1]!;
+
+      plainPath.forEach((point, i) => {
+        const remainingMs = totalMs - delays[i]!;
+        const t = setTimeout(() => {
+          setSimulatedOrigin({ lat: point.lat, lng: point.lng, name: 'Simulated Location' });
+          setRemainingDrivingPath(plainPath.slice(i));
+          setSimulatedRemainingMinutes(Math.max(0, Math.round(remainingMs / 60000)));
+          if (i === plainPath.length - 1) {
+            setRemainingDrivingPath(null);
+            setSimulatedRemainingMinutes(null);
+            setIsSimulating(false);
+            onComplete();
+          }
+        }, delays[i]);
+        simulationTimeoutsRef.current.push(t);
+      });
+    }
+
+    (window as unknown as Record<string, unknown>).__startSimulation = (speedKmh = 50) => {
+      const path = activeDrivingRouteRef.current?.path;
+      if (!path || path.length < 2) {
+        console.warn('[Sim] No route path available yet â€” select a destination first');
+        return;
+      }
+
+      simulationTimeoutsRef.current.forEach(clearTimeout);
+      simulationTimeoutsRef.current = [];
+      isSimulatingRef.current = true;
+      setIsSimulating(true);
+
+      const speedMs = (speedKmh * 1000) / 3600; // m/s
+
+      console.log(`[Sim] Starting simulation: ${path.length} points at ${speedKmh} km/h`);
+
+      runPathSimulation(path, speedMs, () => {
+        isSimulatingRef.current = false;
+        setSimulatedOrigin(null);
+        setDrivingComplete(true);
+        setHasArrived(true);
+        console.log('[Sim] Arrived at carpark');
+      });
+    };
+
+    (window as unknown as Record<string, unknown>).__stopSimulation = () => {
+      simulationTimeoutsRef.current.forEach(clearTimeout);
+      simulationTimeoutsRef.current = [];
+      isSimulatingRef.current = false;
+      setIsSimulating(false);
+      setSimulatedOrigin(null);
+      setRemainingDrivingPath(null);
+      setRemainingWalkingPath(null);
+      setSimulatedRemainingMinutes(null);
+      setDrivingComplete(false);
+      console.log('[Sim] Simulation stopped');
+    };
+
+    return () => {
+      simulationTimeoutsRef.current.forEach(clearTimeout);
+      delete (window as unknown as Record<string, unknown>).__startSimulation;
+      delete (window as unknown as Record<string, unknown>).__stopSimulation;
+    };
+  }, []);
 
   //live weather
   const { weather: liveWeather } = useWeather({
@@ -599,6 +718,60 @@ interface NavigationTestWindow {
     setIsSheetCollapsed(false);
   };
 
+  const handleStartWalking = useCallback(() => {
+    setHasArrived(false);
+    const path = walkingInfoRef.current?.path;
+    if (!path || path.length < 2) return;
+    const walkingSpeedMs = (200 * 1000) / 3600; // fast for testing
+    isSimulatingRef.current = true;
+    setIsSimulating(true);
+
+    simulationTimeoutsRef.current.forEach(clearTimeout);
+    simulationTimeoutsRef.current = [];
+
+    function getLatLng(point: { lat: number; lng: number } | google.maps.LatLng) {
+      if (typeof (point as google.maps.LatLng).lat === 'function') {
+        const p = point as google.maps.LatLng;
+        return { lat: p.lat(), lng: p.lng() };
+      }
+      return point as { lat: number; lng: number };
+    }
+
+    function haversineMeters(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
+      const R = 6371000;
+      const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+      const dLng = ((b.lng - a.lng) * Math.PI) / 180;
+      const s =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos((a.lat * Math.PI) / 180) * Math.cos((b.lat * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s));
+    }
+
+    const plainPath = path.map((p) => getLatLng(p as { lat: number; lng: number } | google.maps.LatLng));
+    setRemainingWalkingPath(plainPath);
+
+    const delays: number[] = [0];
+    for (let i = 0; i < plainPath.length - 1; i++) {
+      delays.push(delays[i]! + (haversineMeters(plainPath[i]!, plainPath[i + 1]!) / walkingSpeedMs) * 1000);
+    }
+
+    plainPath.forEach((point, i) => {
+      const t = setTimeout(() => {
+        setSimulatedOrigin({ lat: point.lat, lng: point.lng, name: 'Walking' });
+        setRemainingWalkingPath(plainPath.slice(i));
+        if (i === plainPath.length - 1) {
+          isSimulatingRef.current = false;
+          setIsSimulating(false);
+          setSimulatedOrigin(null);
+          setRemainingWalkingPath(null);
+          setArrivedAtDestination(true);
+          console.log('[Sim] Arrived at destination');
+        }
+      }, delays[i]);
+      simulationTimeoutsRef.current.push(t);
+    });
+  }, []);
+
   const clearFilters = () => {
     setPricingAsc(false);
     setEvFilter(null);
@@ -667,11 +840,12 @@ interface NavigationTestWindow {
 
         {/*google maps*/}
         <NavigationMap
-          origin={originLocation}
+          origin={simulatedOrigin ?? originLocation}
+          isSimulating={isSimulating}
           carpark={carparkLocation}
           destination={destinationLocation}
-          drivingPath={isSheetVisible ? activeDrivingRoute?.path : undefined}
-          walkingPath={isSheetVisible ? walkingInfo?.path : undefined}
+          drivingPath={isSheetVisible && !drivingComplete ? (remainingDrivingPath ?? activeDrivingRoute?.path) : undefined}
+          walkingPath={isSheetVisible ? (remainingWalkingPath ?? walkingInfo?.path) : undefined}
           isLocating={isLocating}
           isSheetCollapsed={isSheetCollapsed}
           isSheetVisible={isSheetVisible}
@@ -732,7 +906,15 @@ interface NavigationTestWindow {
             origin={originLocation}
             carpark={carparkLocation}
             destination={destinationLocation}
-            drivingRoutes={drivingRoutes}
+            drivingRoutes={
+              isSimulating && simulatedRemainingMinutes !== null
+                ? drivingRoutes.map((r, i) =>
+                    i === activeRouteIndex
+                      ? { ...r, durationMinutes: simulatedRemainingMinutes }
+                      : r,
+                  )
+                : drivingRoutes
+            }
             activeRouteIndex={activeRouteIndex}
             onSelectRoute={setActiveRouteIndex}
             walkingInfo={walkingInfo ?? undefined}
@@ -745,6 +927,105 @@ interface NavigationTestWindow {
         )}
       </div>
 
+
+
+      {/*arrived at carpark popup*/}
+      {hasArrived && (
+        <div style={{
+          position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
+          justifyContent: 'center', zIndex: 200,
+          background: 'rgba(0,0,0,0.45)',
+        }}>
+          <div style={{
+            background: '#fff', borderRadius: 20, padding: '28px 24px', margin: '0 20px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.18)', textAlign: 'center', width: '100%', maxWidth: 320,
+          }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: '#111827', marginBottom: 4 }}>
+              You have arrived!
+            </div>
+            <div style={{ fontSize: 14, color: '#6B7280', marginBottom: 4 }}>
+              {carparkLocation.name}
+            </div>
+            {carparkLocation.availableLots !== undefined && (
+              <div style={{
+                display: 'inline-block', marginBottom: 20, padding: '4px 12px',
+                borderRadius: 99, fontSize: 13, fontWeight: 600,
+                background: carparkLocation.availableLots >= 20 ? '#D1FAE5' : carparkLocation.availableLots >= 5 ? '#FEF3C7' : '#FEE2E2',
+                color: carparkLocation.availableLots >= 20 ? '#065F46' : carparkLocation.availableLots >= 5 ? '#92400E' : '#991B1B',
+              }}>
+                {carparkLocation.availableLots} lots available
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 10, flexDirection: 'column' }}>
+              <button
+                type="button"
+                onClick={handleStartWalking}
+                style={{
+                  padding: '12px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                  background: '#F59E0B', color: '#fff', fontWeight: 700, fontSize: 15,
+                }}
+              >
+                Start Walking to Destination
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setHasArrived(false);
+                  simulationTimeoutsRef.current.forEach(clearTimeout);
+                  simulationTimeoutsRef.current = [];
+                  isSimulatingRef.current = false;
+                  setSimulatedOrigin(null);
+                }}
+                style={{
+                  padding: '12px', borderRadius: 12, border: '1.5px solid #E5E7EB',
+                  cursor: 'pointer', background: '#fff', color: '#374151', fontWeight: 600, fontSize: 15,
+                }}
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/*arrived at destination popup*/}
+      {arrivedAtDestination && (
+        <div style={{
+          position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
+          justifyContent: 'center', zIndex: 200,
+          background: 'rgba(0,0,0,0.45)',
+        }}>
+          <div style={{
+            background: '#fff', borderRadius: 20, padding: '28px 24px', margin: '0 20px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.18)', textAlign: 'center', width: '100%', maxWidth: 320,
+          }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: '#111827', marginBottom: 4 }}>
+              You have arrived!
+            </div>
+            <div style={{ fontSize: 14, color: '#6B7280', marginBottom: 20 }}>
+              {destinationLocation.name}
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setArrivedAtDestination(false);
+                setDrivingComplete(false);
+                setRemainingDrivingPath(null);
+                setRemainingWalkingPath(null);
+                handleCancelNavigation();
+              }}
+              style={{
+                width: '100%', padding: '12px', borderRadius: 12, border: '1.5px solid #E5E7EB',
+                cursor: 'pointer', background: '#fff', color: '#374151', fontWeight: 600, fontSize: 15,
+              }}
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/*carkpark details */}
       {/*Carpark Detail Page overlay*/}
       {selectedDetailCarparkNo && (
         <CarparkDetailPage

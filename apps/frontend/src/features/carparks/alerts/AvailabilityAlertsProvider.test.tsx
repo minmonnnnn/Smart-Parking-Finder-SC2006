@@ -117,7 +117,7 @@ describe("AvailabilityAlertsProvider", () => {
     await tick(60_000);
 
     expect(screen.getByRole("status").textContent).toBe(
-      "AK19 availability changed from High to Moderate. 20 of 100 lots available.",
+      "Navigating carpark availability changed from High to Moderate. 20 of 100 lots available.",
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Open details" }));
@@ -136,7 +136,7 @@ describe("AvailabilityAlertsProvider", () => {
     });
 
     expect(screen.getByRole("status").textContent).toBe(
-      "AK19 availability changed from High to Moderate. 24 of 120 lots available.",
+      "Navigating carpark availability changed from High to Moderate. 24 of 120 lots available.",
     );
   });
 

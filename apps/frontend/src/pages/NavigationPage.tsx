@@ -61,6 +61,7 @@ export function NavigationPage({
   }, [originLocation]);
   const simulationTimeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const isSimulatingRef = useRef(false);
+  const [simulatedOrigin, setSimulatedOrigin] = useState<typeof SAMPLE_ORIGIN | null>(null);
   const [carparkLocation, setCarparkLocation] = useState(initialCp);
   const [destinationLocation, setDestinationLocation] =
     useState<NavDestination>(
@@ -294,9 +295,10 @@ interface NavigationTestWindow {
 
         const delay = cumulativeMs;
         const t = setTimeout(() => {
-          setOriginLocation({ lat: point.lat, lng: point.lng, name: 'Simulated Location' });
+          setSimulatedOrigin({ lat: point.lat, lng: point.lng, name: 'Simulated Location' });
           if (i === path.length - 1) {
             isSimulatingRef.current = false;
+            setSimulatedOrigin(null);
             console.log('[Sim] Simulation complete');
           }
         }, delay);
@@ -315,6 +317,7 @@ interface NavigationTestWindow {
       simulationTimeoutsRef.current.forEach(clearTimeout);
       simulationTimeoutsRef.current = [];
       isSimulatingRef.current = false;
+      setSimulatedOrigin(null);
       console.log('[Sim] Simulation stopped');
     };
 
@@ -669,7 +672,7 @@ interface NavigationTestWindow {
 
         {/*google maps*/}
         <NavigationMap
-          origin={originLocation}
+          origin={simulatedOrigin ?? originLocation}
           carpark={carparkLocation}
           destination={destinationLocation}
           drivingPath={isSheetVisible ? activeDrivingRoute?.path : undefined}

@@ -96,4 +96,20 @@ describe('getHistoricalAvailabilityRatio', () => {
 
     await expect(getHistoricalAvailabilityRatio('AK19', 0, 15)).resolves.toBeNull();
   });
+
+  it('returns null when the query succeeds without data', async () => {
+    createQueryMock(null);
+
+    await expect(getHistoricalAvailabilityRatio('AK19', 0, 15)).resolves.toBeNull();
+  });
+
+  it('returns null when the query throws', async () => {
+    const query = createQueryMock([]).query;
+    query.eq.mockImplementation((column: string) => {
+      if (column === 'time_bucket_start') throw new Error('connection lost');
+      return query;
+    });
+
+    await expect(getHistoricalAvailabilityRatio('AK19', 0, 15)).resolves.toBeNull();
+  });
 });

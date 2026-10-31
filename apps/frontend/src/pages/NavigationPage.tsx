@@ -253,6 +253,13 @@ interface NavigationTestWindow {
     activeDrivingRouteRef.current = activeDrivingRoute;
   }, [activeDrivingRoute]);
 
+  const walkingInfoRef = useRef(walkingInfo);
+  useEffect(() => {
+    walkingInfoRef.current = walkingInfo;
+  }, [walkingInfo]);
+
+  const [hasArrived, setHasArrived] = useState(false);
+
   // Console helpers for demo/testing: simulate marker movement along the route
   useEffect(() => {
     function getLatLng(point: { lat: number; lng: number } | google.maps.LatLng) {
@@ -273,6 +280,28 @@ interface NavigationTestWindow {
       return R * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s));
     }
 
+    function runPathSimulation(
+      path: ({ lat: number; lng: number } | google.maps.LatLng)[],
+      speedMs: number,
+      onComplete: () => void,
+    ) {
+      simulationTimeoutsRef.current.forEach(clearTimeout);
+      simulationTimeoutsRef.current = [];
+      let cumulativeMs = 0;
+      path.forEach((rawPoint, i) => {
+        const point = getLatLng(rawPoint as { lat: number; lng: number } | google.maps.LatLng);
+        const t = setTimeout(() => {
+          setSimulatedOrigin({ lat: point.lat, lng: point.lng, name: 'Simulated Location' });
+          if (i === path.length - 1) onComplete();
+        }, cumulativeMs);
+        simulationTimeoutsRef.current.push(t);
+        if (i < path.length - 1) {
+          const next = getLatLng(path[i + 1] as { lat: number; lng: number } | google.maps.LatLng);
+          cumulativeMs += (haversineMeters(point, next) / speedMs) * 1000;
+        }
+      });
+    }
+
     (window as unknown as Record<string, unknown>).__startSimulation = (speedKmh = 50) => {
       const path = activeDrivingRouteRef.current?.path;
       if (!path || path.length < 2) {
@@ -290,26 +319,11 @@ interface NavigationTestWindow {
 
       console.log(`[Sim] Starting simulation: ${path.length} points at ${speedKmh} km/h`);
 
-      path.forEach((rawPoint, i) => {
-        const point = getLatLng(rawPoint as { lat: number; lng: number } | google.maps.LatLng);
-
-        const delay = cumulativeMs;
-        const t = setTimeout(() => {
-          setSimulatedOrigin({ lat: point.lat, lng: point.lng, name: 'Simulated Location' });
-          if (i === path.length - 1) {
-            isSimulatingRef.current = false;
-            setSimulatedOrigin(null);
-            console.log('[Sim] Simulation complete');
-          }
-        }, delay);
-
-        simulationTimeoutsRef.current.push(t);
-
-        if (i < path.length - 1) {
-          const next = getLatLng((path[i + 1] as { lat: number; lng: number } | google.maps.LatLng));
-          const dist = haversineMeters(point, next);
-          cumulativeMs += (dist / speedMs) * 1000;
-        }
+      runPathSimulation(path, speedMs, () => {
+        isSimulatingRef.current = false;
+        setSimulatedOrigin(null);
+        setHasArrived(true);
+        console.log('[Sim] Arrived at carpark');
       });
     };
 
@@ -610,6 +624,53 @@ interface NavigationTestWindow {
     setIsSheetCollapsed(false);
   };
 
+  const handleStartWalking = useCallback(() => {
+    setHasArrived(false);
+    const path = walkingInfoRef.current?.path;
+    if (!path || path.length < 2) return;
+    const walkingSpeedMs = 5 * 1000 / 3600; // 5 km/h in m/s
+    isSimulatingRef.current = true;
+
+    function getLatLng(point: { lat: number; lng: number } | google.maps.LatLng) {
+      if (typeof (point as google.maps.LatLng).lat === 'function') {
+        const p = point as google.maps.LatLng;
+        return { lat: p.lat(), lng: p.lng() };
+      }
+      return point as { lat: number; lng: number };
+    }
+
+    function haversineMeters(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
+      const R = 6371000;
+      const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+      const dLng = ((b.lng - a.lng) * Math.PI) / 180;
+      const s =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos((a.lat * Math.PI) / 180) * Math.cos((b.lat * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s));
+    }
+
+    simulationTimeoutsRef.current.forEach(clearTimeout);
+    simulationTimeoutsRef.current = [];
+    let cumulativeMs = 0;
+    path.forEach((rawPoint, i) => {
+      const point = getLatLng(rawPoint as { lat: number; lng: number } | google.maps.LatLng);
+      const t = setTimeout(() => {
+        setSimulatedOrigin({ lat: point.lat, lng: point.lng, name: 'Walking' });
+        if (i === path.length - 1) {
+          isSimulatingRef.current = false;
+          setSimulatedOrigin(null);
+          setHasArrived(true);
+          console.log('[Sim] Arrived at destination');
+        }
+      }, cumulativeMs);
+      simulationTimeoutsRef.current.push(t);
+      if (i < path.length - 1) {
+        const next = getLatLng(path[i + 1] as { lat: number; lng: number } | google.maps.LatLng);
+        cumulativeMs += (haversineMeters(point, next) / walkingSpeedMs) * 1000;
+      }
+    });
+  }, []);
+
   const clearFilters = () => {
     setPricingAsc(false);
     setEvFilter(null);
@@ -751,6 +812,66 @@ interface NavigationTestWindow {
       </div>
 
 
+
+      {/*arrival popup*/}
+      {hasArrived && (
+        <div style={{
+          position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
+          justifyContent: 'center', zIndex: 200,
+          background: 'rgba(0,0,0,0.45)',
+        }}>
+          <div style={{
+            background: '#fff', borderRadius: 20, padding: '28px 24px', margin: '0 20px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.18)', textAlign: 'center', width: '100%', maxWidth: 320,
+          }}>
+            <div style={{ fontSize: 40, marginBottom: 8 }}>🎉</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: '#111827', marginBottom: 4 }}>
+              You have arrived!
+            </div>
+            <div style={{ fontSize: 14, color: '#6B7280', marginBottom: 4 }}>
+              {carparkLocation.name}
+            </div>
+            {carparkLocation.availableLots !== undefined && (
+              <div style={{
+                display: 'inline-block', marginBottom: 20, padding: '4px 12px',
+                borderRadius: 99, fontSize: 13, fontWeight: 600,
+                background: carparkLocation.availableLots >= 20 ? '#D1FAE5' : carparkLocation.availableLots >= 5 ? '#FEF3C7' : '#FEE2E2',
+                color: carparkLocation.availableLots >= 20 ? '#065F46' : carparkLocation.availableLots >= 5 ? '#92400E' : '#991B1B',
+              }}>
+                {carparkLocation.availableLots} lots available
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 10, flexDirection: 'column' }}>
+              <button
+                type="button"
+                onClick={handleStartWalking}
+                style={{
+                  padding: '12px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                  background: '#F59E0B', color: '#fff', fontWeight: 700, fontSize: 15,
+                }}
+              >
+                Start Walking to Destination
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setHasArrived(false);
+                  simulationTimeoutsRef.current.forEach(clearTimeout);
+                  simulationTimeoutsRef.current = [];
+                  isSimulatingRef.current = false;
+                  setSimulatedOrigin(null);
+                }}
+                style={{
+                  padding: '12px', borderRadius: 12, border: '1.5px solid #E5E7EB',
+                  cursor: 'pointer', background: '#fff', color: '#374151', fontWeight: 600, fontSize: 15,
+                }}
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/*carkpark details */}
       {selectedDetailCarparkNo && (

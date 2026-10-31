@@ -11,11 +11,16 @@ interface SignInPageProps {
 
 // Displays the form used to authenticate an existing user
 export function SignInPage({ onSignedIn, onSwitchMode }: SignInPageProps) {
-  const { login } = useAuth()
+  const { login, loginAsGuest } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [errors, setErrors] = useState<string[]>([])
   const [pending, setPending] = useState(false)
+
+  function handleGuestSignIn() {
+    loginAsGuest()
+    onSignedIn()
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -54,6 +59,31 @@ export function SignInPage({ onSignedIn, onSwitchMode }: SignInPageProps) {
         <PasswordField id="sign-in-password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" invalid={errors.includes('Enter your password')} />
         {errors.length > 0 && <div className="auth-errors" role="alert">{errors.map((message) => <p key={message}>{message}</p>)}</div>}
         <button className="auth-submit" type="submit" disabled={pending}>{pending ? 'Signing in…' : 'Sign in'}</button>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', margin: '14px 0 10px 0' }}>
+          <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
+          <span style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>or</span>
+          <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
+        </div>
+
+        <button
+          type="button"
+          onClick={handleGuestSignIn}
+          disabled={pending}
+          style={{
+            width: '100%',
+            padding: '10px 16px',
+            fontSize: '14px',
+            fontWeight: 600,
+            color: '#1e293b',
+            backgroundColor: '#f8fafc',
+            border: '1px solid #cbd5e1',
+            borderRadius: '8px',
+            cursor: 'pointer',
+          }}
+        >
+          Continue as Guest
+        </button>
       </form>
 
       <p className="auth-switch">New to Smart Parking? <button type="button" onClick={onSwitchMode}>Create an account</button></p>

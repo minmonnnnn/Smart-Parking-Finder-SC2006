@@ -7,6 +7,7 @@ export interface MobileHeaderProps {
   onNavigate?: (page: 'search' | 'favourites' | 'profile' | 'navigation') => void;
   onLogout?: () => void;
   rightAction?: React.ReactNode;
+  isGuest?: boolean;
 }
 
 export function MobileHeader({
@@ -14,6 +15,7 @@ export function MobileHeader({
   onNavigate,
   onLogout,
   rightAction,
+  isGuest = false,
 }: MobileHeaderProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -66,25 +68,31 @@ export function MobileHeader({
               <button
                 type="button"
                 className={styles.sideNavItem}
+                aria-label="Favourites"
                 onClick={() => {
                   setIsOpen(false);
                   onNavigate?.('favourites');
                 }}
               >
                 <HeartIcon size={20} className={styles.sideNavHeartIcon} />
-                <span className={styles.sideNavItemLabel}>Favourites</span>
+                <span className={styles.sideNavItemLabel}>
+                  Favourites{isGuest ? ' (Sign in required)' : ''}
+                </span>
               </button>
 
               <button
                 type="button"
                 className={styles.sideNavItem}
+                aria-label="Profile"
                 onClick={() => {
                   setIsOpen(false);
                   onNavigate?.('profile');
                 }}
               >
                 <UserIcon size={20} className={styles.sideNavIcon} />
-                <span className={styles.sideNavItemLabel}>Profile</span>
+                <span className={styles.sideNavItemLabel}>
+                  {isGuest ? 'Guest Profile' : 'Profile'}
+                </span>
               </button>
 
               <div className={styles.sideNavDivider} />
@@ -92,13 +100,16 @@ export function MobileHeader({
               <button
                 type="button"
                 className={`${styles.sideNavItem} ${styles.sideNavLogout}`}
+                aria-label={isGuest ? 'Log in or register' : 'Log out'}
                 onClick={() => {
                   setIsOpen(false);
                   onLogout?.();
                 }}
               >
                 <LogOutIcon size={20} className={styles.sideNavIcon} />
-                <span className={styles.sideNavItemLabel}>Log out</span>
+                <span className={styles.sideNavItemLabel}>
+                  {isGuest ? 'Log in / Register' : 'Log out'}
+                </span>
               </button>
             </div>
           </div>

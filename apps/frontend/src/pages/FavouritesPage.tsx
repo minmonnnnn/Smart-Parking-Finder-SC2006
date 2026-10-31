@@ -19,6 +19,63 @@ interface FavouritesPageProps {
 export function FavouritesPage({ onSelect, onSearch, onNavigate, onLogout }: FavouritesPageProps) {
   const { session, logout } = useAuth()
 
+  if (session?.isGuest) {
+    return (
+      <>
+        <MobileHeader
+          title="Saved locations"
+          onNavigate={onNavigate || ((p) => { if (p === 'search' || p === 'navigation') onSearch(); })}
+          onLogout={onLogout || logout}
+        />
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '48px 24px',
+          textAlign: 'center',
+          gap: '16px',
+        }}>
+          <div style={{
+            width: '64px',
+            height: '64px',
+            borderRadius: '50%',
+            backgroundColor: '#FEE2E2',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#EF4444',
+            fontSize: '28px',
+          }}>
+            ♥
+          </div>
+          <h2 style={{ fontSize: '20px', fontWeight: 600, color: '#1E293B', margin: 0 }}>
+            Sign In Required
+          </h2>
+          <p style={{ fontSize: '14px', color: '#64748B', maxWidth: '320px', margin: 0, lineHeight: 1.5 }}>
+            Favourites are saved to your personal account. Sign in or register to bookmark your frequent carparks.
+          </p>
+          <button
+            type="button"
+            onClick={onLogout || logout}
+            style={{
+              marginTop: '8px',
+              padding: '10px 24px',
+              backgroundColor: '#0284C7',
+              color: '#FFFFFF',
+              border: 'none',
+              borderRadius: '8px',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Sign In / Register
+          </button>
+        </div>
+      </>
+    )
+  }
+
   return (
     <>
       <MobileHeader

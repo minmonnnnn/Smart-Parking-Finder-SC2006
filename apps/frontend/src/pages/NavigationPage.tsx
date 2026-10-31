@@ -41,6 +41,7 @@ export function NavigationPage({
   initialCarparkDetails,
   onNavigate,
   onLogout,
+  isGuest = false,
 }: NavigationPageProps) {
   const initialCp = initialCarparkDetails
     ? {
@@ -553,7 +554,7 @@ interface NavigationTestWindow {
   return (
     <div className={styles.phoneFrame}>
       {/*mobile header top nav*/}
-      <MobileHeader onNavigate={onNavigate} onLogout={onLogout} />
+      <MobileHeader onNavigate={onNavigate} onLogout={onLogout} isGuest={isGuest} />
 
       {/*map*/}
       <div className={styles.mapArea}>

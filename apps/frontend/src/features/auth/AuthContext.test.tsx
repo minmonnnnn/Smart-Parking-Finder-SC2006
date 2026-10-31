@@ -40,6 +40,7 @@ function Harness() {
     <output data-testid="operation">{operation}</output>
     <button onClick={() => void auth.register({ email: profile.email, password: 'secret', name: profile.name, vehicleType: 'EV' }).then(() => setOperation('registered'), () => setOperation('register-failed'))}>register</button>
     <button onClick={() => void auth.login({ email: profile.email, password: 'secret' }).then(() => setOperation('login-settled'), () => setOperation('login-failed'))}>login</button>
+    <button onClick={() => void auth.loginAsGuest()}>login-as-guest</button>
     <button onClick={() => void auth.login({ email: 'second@example.com', password: 'secret' }).then(() => setOperation('login-settled'), () => setOperation('login-failed'))}>switch-account</button>
     <button onClick={() => void auth.logout()}>logout</button>
     <button onClick={() => void auth.deleteAccount().then(() => setOperation('deleted'), () => setOperation('delete-failed'))}>delete</button>
@@ -318,5 +319,17 @@ describe('AuthContext', () => {
 
     expect(screen.getByTestId('session')).toHaveTextContent('user-2')
     expect(JSON.parse(localStorage.getItem(AUTH_STORAGE_KEY) ?? '{}')).toEqual({ userId: 'user-2', token: 'second-token' })
+  })
+
+  it('supports loginAsGuest and provides guest profile without network calls', async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    const user = userEvent.setup()
+    renderAuth()
+    await user.click(screen.getByRole('button', { name: 'login-as-guest' }))
+    expect(screen.getByTestId('session')).toHaveTextContent('guest')
+    expect(screen.getByTestId('profile')).toHaveTextContent('Guest User')
+    expect(screen.getByTestId('loading')).toHaveTextContent('idle')
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 })

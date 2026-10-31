@@ -42,5 +42,6 @@ export interface NavigationPageProps {
   initialCarparkDetails?: CarparkDetails | null;
   onNavigate?: (page: 'search' | 'favourites' | 'profile' | 'navigation') => void;
   onLogout?: () => void;
+  isGuest?: boolean;
 }
 

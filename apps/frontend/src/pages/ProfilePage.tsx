@@ -15,6 +15,46 @@ interface ProfilePageProps {
 // Displays and allows modification of the authenticated user's profile, including account deletion
 export function ProfilePage({ onAccountDeleted, onNavigate, onLogout }: ProfilePageProps) {
   const { session, profile, loading, error, loadProfile, updateProfile, deleteAccount, logout } = useAuth()
+
+  if (session?.isGuest) {
+    return (
+      <main className="profile-screen">
+        <MobileHeader
+          title="Profile"
+          onNavigate={onNavigate}
+          onLogout={onLogout || logout}
+        />
+        <section className="profile-card" aria-labelledby="guest-profile-title">
+          <h1 id="guest-profile-title">Guest Profile</h1>
+          <p className="profile-muted">
+            You are browsing Smart Parking in guest mode. Your session is temporary.
+          </p>
+          <div className="profile-field">
+            <span className="profile-label">Mode</span>
+            <strong className="profile-value">Guest User</strong>
+          </div>
+          <div className="profile-field">
+            <span className="profile-label">Saved Favourites</span>
+            <span className="profile-value">Disabled (Account required)</span>
+          </div>
+          <div className="profile-field">
+            <span className="profile-label">Availability Alerts</span>
+            <span className="profile-value">Disabled (Account required)</span>
+          </div>
+          <div style={{ marginTop: '24px' }}>
+            <button
+              type="button"
+              className="auth-submit"
+              onClick={onLogout || logout}
+            >
+              Sign In or Register
+            </button>
+          </div>
+        </section>
+      </main>
+    )
+  }
+
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState('')
   const [vehicleType, setVehicleType] = useState<VehicleType | ''>('')

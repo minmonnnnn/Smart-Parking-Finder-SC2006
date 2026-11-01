@@ -6,12 +6,8 @@ import type { IRankingStrategy } from './ranking-strategy.interface.js';
 
 export const MAX_ACCEPTABLE_WALKING_DISTANCE_METERS = 800;
 export const SHELTERED_RAIN_SCORE_MULTIPLIER = 1.1;
-
-/**
- * Default balanced strategy adhering to SRS FR46–FR49.
- * Balances real-time and historical availability (60%) with walking distance proximity (40%),
- * applying a 10% bonus for sheltered carparks when rain is forecasted.
- */
+ //Default balanced strategy
+ //historical availability (60%) with walking distance proximity (40%),
 export class BalancedRankingStrategy implements IRankingStrategy {
   readonly strategyName = 'Balanced';
 

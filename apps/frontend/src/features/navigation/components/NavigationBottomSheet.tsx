@@ -1,8 +1,8 @@
-import { useRef, useState } from 'react';
-import styles from '../../../pages/NavigationPage.module.css';
-import { AlertTriangleIcon, CloudIcon } from '../../../components/icons';
-import type { RouteInfo, WalkingInfo } from '../types';
-import type { WeatherInfo } from '@smart-parking/shared-types';
+import { useRef, useState } from "react";
+import styles from "../../../pages/NavigationPage.module.css";
+import { AlertTriangleIcon, CloudIcon } from "../../../components/icons";
+import type { RouteInfo, WalkingInfo } from "../types";
+import type { WeatherInfo } from "@smart-parking/shared-types";
 
 export interface NavigationBottomSheetProps {
   origin?: { name: string };
@@ -21,14 +21,17 @@ export interface NavigationBottomSheetProps {
 }
 
 function extractAreaName(name?: string): string {
-  if (!name) return 'Bishan';
-  if (name.toLowerCase().includes('bishan')) return 'Bishan';
+  if (!name) return "Bishan";
+  if (name.toLowerCase().includes("bishan")) return "Bishan";
   const clean = name
-    .replace(/(Multi-Storey|Basement|Public|Central|Surface)?\s*Carpark.*$/i, '')
-    .replace(/\s+(Park|Plaza|Mall|Reservoir|Campus|Station).*$/i, '')
-    .replace(/\s+(II|I|A|B|C|1|2|3)$/i, '')
+    .replace(
+      /(Multi-Storey|Basement|Public|Central|Surface)?\s*Carpark.*$/i,
+      "",
+    )
+    .replace(/\s+(Park|Plaza|Mall|Reservoir|Campus|Station).*$/i, "")
+    .replace(/\s+(II|I|A|B|C|1|2|3)$/i, "")
     .trim();
-  return clean || name.split(' ')[0] || 'Bishan';
+  return clean || name.split(" ")[0] || "Bishan";
 }
 
 export function NavigationBottomSheet({
@@ -45,7 +48,7 @@ export function NavigationBottomSheet({
   weatherInfo,
 }: NavigationBottomSheetProps) {
   const currentDriving = drivingRoutes[activeRouteIndex] || drivingRoutes[0];
-  const carparkName = carpark?.name || 'Bishan Park II';
+  const carparkName = carpark?.name || "Bishan Park II";
   const lotsRemaining = carpark?.availableLots ?? 42;
   const areaName = extractAreaName(carparkName);
 
@@ -57,7 +60,7 @@ export function NavigationBottomSheet({
   const justDraggedRef = useRef(false);
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    if (e.button !== 0 && e.pointerType === "mouse") return;
     dragStartYRef.current = e.clientY;
     hasDraggedRef.current = false;
     setIsDragging(true);
@@ -135,7 +138,7 @@ export function NavigationBottomSheet({
   const walkingDist = walkingInfo?.distanceMeters ?? 200;
   const isDirectCarpark = walkingDist <= 50;
   const formattedWalkDistance = isDirectCarpark
-    ? 'At Carpark'
+    ? "At Carpark"
     : walkingDist >= 1000
       ? `${(walkingDist / 1000).toFixed(1)} km`
       : `${walkingDist}m`;
@@ -143,7 +146,7 @@ export function NavigationBottomSheet({
   const handleCancelClick = () => {
     if (onCancelNav) {
       onCancelNav();
-    } else if (typeof window !== 'undefined' && window.history.length > 1) {
+    } else if (typeof window !== "undefined" && window.history.length > 1) {
       window.history.back();
     }
   };
@@ -151,10 +154,11 @@ export function NavigationBottomSheet({
   return (
     <div
       className={`${styles.bottomSheet} ${
-        isSheetCollapsed ? styles.sheetCollapsed : ''
-      } ${isDragging ? styles.bottomSheetDragging : ''}`}
+        isSheetCollapsed ? styles.sheetCollapsed : ""
+      } ${isDragging ? styles.bottomSheetDragging : ""}`}
       style={{
-        transform: dragOffsetY !== 0 ? `translateY(${dragOffsetY}px)` : undefined,
+        transform:
+          dragOffsetY !== 0 ? `translateY(${dragOffsetY}px)` : undefined,
       }}
     >
       <div
@@ -170,15 +174,15 @@ export function NavigationBottomSheet({
           role="button"
           tabIndex={0}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
+            if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
               onToggleCollapse?.();
             }
           }}
           aria-label={
             isSheetCollapsed
-              ? 'Drag handle to expand'
-              : 'Drag handle to collapse'
+              ? "Drag handle to expand"
+              : "Drag handle to collapse"
           }
         />
         <div
@@ -187,20 +191,20 @@ export function NavigationBottomSheet({
           role="button"
           tabIndex={0}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
+            if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
               onToggleCollapse?.();
             }
           }}
           title={
             isSheetCollapsed
-              ? 'Expand navigation details'
-              : 'Collapse navigation details'
+              ? "Expand navigation details"
+              : "Collapse navigation details"
           }
           aria-label={
             isSheetCollapsed
-              ? 'Expand navigation details'
-              : 'Collapse navigation details'
+              ? "Expand navigation details"
+              : "Collapse navigation details"
           }
         >
           <div className={styles.carparkTitle}>{carparkName}</div>
@@ -215,20 +219,24 @@ export function NavigationBottomSheet({
             <div className={styles.metricCard}>
               <div className={styles.metricValue}>
                 {isCalculating
-                  ? '...'
+                  ? "..."
                   : `${currentDriving?.durationMinutes ?? 5} mins`}
               </div>
               <div className={styles.metricLabel}>
-                Drive ({currentDriving?.distanceKm ? `${currentDriving.distanceKm} km` : '1.6 km'})
+                Drive (
+                {currentDriving?.distanceKm
+                  ? `${currentDriving.distanceKm} km`
+                  : "1.6 km"}
+                )
               </div>
               {!isCalculating && currentDriving?.traffic && (
                 <div
                   className={`${styles.trafficIndicator} ${
-                    currentDriving.traffic === 'Heavy'
+                    currentDriving.traffic === "Heavy"
                       ? styles.trafficHeavy
-                      : currentDriving.traffic === 'Moderate'
-                      ? styles.trafficModerate
-                      : styles.trafficLight
+                      : currentDriving.traffic === "Moderate"
+                        ? styles.trafficModerate
+                        : styles.trafficLight
                   }`}
                   data-testid="traffic-status-badge"
                 >
@@ -241,9 +249,9 @@ export function NavigationBottomSheet({
             <div className={styles.metricCard}>
               <div className={styles.metricValue}>
                 {isCalculating
-                  ? '...'
+                  ? "..."
                   : isDirectCarpark
-                    ? '0 min'
+                    ? "0 min"
                     : `${walkingInfo?.durationMinutes ?? 2} mins`}
               </div>
               <div className={styles.metricLabel}>
@@ -252,9 +260,12 @@ export function NavigationBottomSheet({
             </div>
           </div>
 
-          {/* Alternative Routes Selection (FR34) */}
+          {/* Alternative Routes Selection*/}
           {drivingRoutes.length > 1 && onSelectRoute && (
-            <div className={styles.routeSelector} data-testid="alternative-routes">
+            <div
+              className={styles.routeSelector}
+              data-testid="alternative-routes"
+            >
               <div className={styles.routeSelectorHeader}>Available Routes</div>
               <div className={styles.routeOptionList}>
                 {drivingRoutes.map((route, idx) => (
@@ -262,16 +273,20 @@ export function NavigationBottomSheet({
                     key={idx}
                     type="button"
                     className={`${styles.routeOptionBtn} ${
-                      idx === activeRouteIndex ? styles.routeOptionBtnActive : ''
+                      idx === activeRouteIndex
+                        ? styles.routeOptionBtnActive
+                        : ""
                     }`}
                     onClick={() => onSelectRoute(idx)}
                     aria-label={`Select route ${idx + 1}: ${route.summary}`}
                   >
                     <span className={styles.routeOptionSummary}>
-                      {route.summary || (idx === 0 ? 'Primary Route' : `Alternative ${idx}`)}
+                      {route.summary ||
+                        (idx === 0 ? "Primary Route" : `Alternative ${idx}`)}
                     </span>
                     <span className={styles.routeOptionMeta}>
-                      {route.durationMinutes} mins • {route.distanceKm} km • {route.traffic}
+                      {route.durationMinutes} mins • {route.distanceKm} km •{" "}
+                      {route.traffic}
                     </span>
                   </button>
                 ))}
@@ -279,7 +294,7 @@ export function NavigationBottomSheet({
             </div>
           )}
 
-          {/* Weather Alert / Condition Information (FR24-FR27) */}
+          {/* Weather Alert*/}
           {weatherInfo?.rainExpected ? (
             <div className={styles.weatherAlertCard}>
               <AlertTriangleIcon className={styles.weatherAlertIcon} />

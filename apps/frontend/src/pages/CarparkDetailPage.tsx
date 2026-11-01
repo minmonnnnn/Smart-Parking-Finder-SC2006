@@ -474,7 +474,7 @@ export function CarparkDetailPage({
         </div>
       )}
 
-      {/* Delete Confirmation Modal (FR39, UC-11) */}
+      {/* Delete Confirmation Modal*/}
       {showDeleteModal && (
         <div
           style={{
@@ -527,7 +527,7 @@ export function CarparkDetailPage({
         </div>
       )}
 
-      {/* Feedback Toast */}
+      {/*Feedback Toast */}
       {toastMessage && (
         <div
           role="status"

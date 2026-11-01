@@ -19,9 +19,9 @@ import { createAvailabilityRouter } from "./modules/availability/routes.js";
 import { createAlertRepository } from "./modules/availability/alerts.repository.js";
 import { createAlertRouter } from "./modules/availability/alerts.routes.js";
 import {
-  checkAvailabilityAlerts,
-  type AvailabilityNotification,
-} from "./modules/availability/alerts.service.js";
+  AvailabilityAlertSubject,
+  ConsoleAlertObserver,
+} from "./modules/availability/observers/index.js";
 import { startAvailabilityPoller } from "./modules/availability/poller.js";
 import { loadHdbLtaCapacities } from "./modules/availability/lta-capacities.js";
 
@@ -35,20 +35,9 @@ const availabilityRepository = createAvailabilityRepository(
 );
 const alertRepository = createAlertRepository(clients.adminClient);
 
-async function logAvailabilityNotification(
-  notification: AvailabilityNotification,
-): Promise<void> {
-  const timestamp = new Date().toLocaleTimeString("en-SG", {
-    hour12: false,
-  });
-
-  console.log(
-    `[${timestamp}] [AVAILABILITY ALERT] Alert #${notification.alertId} ` +
-      `for User "${notification.userId}": Carpark "${notification.carParkNo}" ` +
-      `status changed from "${notification.previousStatus}" ` +
-      `to "${notification.currentStatus}"!`,
-  );
-}
+// Initialize GoF Observer Pattern: Subject and Concrete Observers
+const alertSubject = new AvailabilityAlertSubject();
+alertSubject.attach(new ConsoleAlertObserver());
 
 const server = createApp({
   frontendOrigin: env.frontendOrigin,
@@ -83,7 +72,7 @@ const stopAvailabilityPoller = startAvailabilityPoller(availabilityRepository, {
       }
     : {}),
   checkAlerts: () =>
-    checkAvailabilityAlerts(logAvailabilityNotification, {
+    alertSubject.checkAlerts({
       alerts: alertRepository,
       availability: availabilityRepository,
     }),

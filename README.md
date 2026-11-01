@@ -111,3 +111,4 @@ sc2006/
 | Moufooza | [@moufooza](https://github.com/moufooza)     |
 | Nigel    | [@nhjr2000](https://github.com/nhjr2000)     |
 | Teik Fei | [@Teik-Fei](https://github.com/Teik-Fei)     |
+| Shan Xi  | [@xi7869](https://github.com/xi7869)         |

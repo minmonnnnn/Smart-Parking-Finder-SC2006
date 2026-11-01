@@ -105,6 +105,8 @@ export function NavigationPage({
   const [suggestions, setSuggestions] =
     useState<PlaceItem[]>(POPULAR_DESTINATIONS);
   const [isSearching, setIsSearching] = useState(false);
+  const displayedSuggestions = searchQuery.trim() ? suggestions : POPULAR_DESTINATIONS;
+  const displayedIsSearching = searchQuery.trim() ? isSearching : false;
   const [evFilter, setEvFilter] = useState<YesNo | null>(null);
   const [shelteredFilter, setShelteredFilter] = useState<YesNo | null>(null);
   const [pricingAsc, setPricingAsc] = useState(false);
@@ -504,8 +506,6 @@ interface NavigationTestWindow {
     let cancelled = false;
 
     if (!searchQuery.trim()) {
-      setSuggestions(POPULAR_DESTINATIONS);
-      setIsSearching(false);
       return;
     }
 
@@ -583,7 +583,7 @@ interface NavigationTestWindow {
 
         const carparks = results.carparks || [];
         if (carparks.length > 0) {
-          let cardItems = carparks.map(toCarparkCardData).filter((cp) => cp.availableLots > 0);
+          const cardItems = carparks.map(toCarparkCardData).filter((cp) => cp.availableLots > 0);
 
           setRecommendedCarparks(cardItems);
           setIsLoadingCarparks(false);
@@ -811,8 +811,8 @@ interface NavigationTestWindow {
             query={searchQuery}
             onChange={setSearchQuery}
             onSearch={() => {
-              if (suggestions.length > 0) {
-                handleSelectPlace(suggestions[0]);
+              if (displayedSuggestions.length > 0) {
+                handleSelectPlace(displayedSuggestions[0]);
               }
             }}
             evFilter={evFilter}
@@ -829,12 +829,12 @@ interface NavigationTestWindow {
                 ? `Search destination (current: ${destinationLocation.main || destinationLocation.name || "Destination"})`
                 : "Search destination..."
             }
-            suggestions={suggestions}
+            suggestions={displayedSuggestions}
             onSelectSuggestion={(place) => {
               handleSelectPlace(place);
             }}
             onGetCurrentLocation={handleGetCurrentLocation}
-            isSearching={isSearching}
+            isSearching={displayedIsSearching}
           />
         </div>
 

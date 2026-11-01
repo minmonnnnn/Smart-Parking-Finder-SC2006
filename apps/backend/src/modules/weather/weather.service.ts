@@ -1,7 +1,6 @@
 /**
  * Weather service — owner: Moufooza
  * Wraps the data.gov.sg NEA 2-hour nowcast API.
- * FR24–FR27, UC-05
  */
 
 import type { WeatherInfo } from '@smart-parking/shared-types';

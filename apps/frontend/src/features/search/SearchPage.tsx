@@ -1,4 +1,4 @@
-import { type CSSProperties, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+﻿import { type CSSProperties, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { Card, ProgressBar, progressPercent, vars } from "../../components";
 import { MapView } from "./MapView";
 import type {
@@ -72,7 +72,7 @@ function DropdownItem({ children, selected, onClick, multi = false }: {
           background: selected ? vars.color.secondary : "transparent",
           display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
         }}>
-          {selected && <span style={{ color: "#fff", fontSize: 10, lineHeight: 1, fontWeight: 700 }}>✓</span>}
+          {selected && <span style={{ color: "#fff", fontSize: 10, lineHeight: 1, fontWeight: 700 }}>âœ“</span>}
         </span>
       ) : (
         <span style={{
@@ -145,7 +145,7 @@ function CarparkCard({ item, onSelect }: { item: RankedCarpark; onSelect?: () =>
             {carpark.address}
           </div>
           <div style={{ fontSize: vars.fontSize.sm, color: vars.color.textSecondary, marginTop: vars.space[1] }}>
-            {formatDistance(distanceMeters)} · {walkingEtaMinutes} min walk
+            {formatDistance(distanceMeters)} Â· {walkingEtaMinutes} min walk
           </div>
           <div style={{ display: "flex", gap: vars.space[2], marginTop: vars.space[2], flexWrap: "wrap" }}>
             {carpark.isSheltered && <Badge>Sheltered</Badge>}
@@ -218,7 +218,7 @@ function DegradedBanner({ services }: { services: CarparkDataService[] }) {
 
 function SearchBar({
   query, onChange, onSearch, onSelectSuggestion, suggestions, showSuggestions,
-  evFilter, onEvFilter, shelteredFilter, onShelteredFilter, pricingAsc, onPricingAsc,
+  evFilter, onEvFilter, shelteredFilter, onShelteredFilter, 
   availabilityDesc, onAvailabilityDesc, onClearFilters,
 }: {
   query: string;
@@ -562,7 +562,7 @@ export default function SearchPage({
         <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 10 }}>
           {isLoading && (
             <div style={{ textAlign: "center", padding: vars.space[2], fontSize: vars.fontSize.sm, color: vars.color.textSecondary, background: "rgba(255,255,255,0.9)" }}>
-              Finding carparks…
+              Finding carparksâ€¦
             </div>
           )}
           {error && (
@@ -604,7 +604,7 @@ export default function SearchPage({
         <DegradedBanner services={degradedServices} />
 
         <div style={{ fontSize: vars.fontSize.sm, color: vars.color.textSecondary, margin: `${vars.space[2]} 0 ${vars.space[3]}` }}>
-          {isLoading ? "Searching…" : `${results.length} carparks near ${destination}`}
+          {isLoading ? "Searchingâ€¦" : `${results.length} carparks near ${destination}`}
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: vars.space[3] }}>

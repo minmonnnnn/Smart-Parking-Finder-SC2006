@@ -16,6 +16,31 @@ interface ProfilePageProps {
 export function ProfilePage({ onAccountDeleted, onNavigate, onLogout }: ProfilePageProps) {
   const { session, profile, loading, error, loadProfile, updateProfile, deleteAccount, logout } = useAuth()
 
+  const [editing, setEditing] = useState(false)
+  const [name, setName] = useState('')
+  const [vehicleType, setVehicleType] = useState<VehicleType | ''>('')
+  const [editError, setEditError] = useState('')
+  const [profileUpdated, setProfileUpdated] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [confirming, setConfirming] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
+  const [deleting, setDeleting] = useState(false)
+  const deleteTriggerRef = useRef<HTMLButtonElement>(null)
+  const cancelDeleteRef = useRef<HTMLButtonElement>(null)
+  const confirmDeleteRef = useRef<HTMLButtonElement>(null)
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const restoreDeleteFocusRef = useRef(false)
+
+  useEffect(() => {
+    if (confirming) {
+      if (deleting) dialogRef.current?.focus()
+      else cancelDeleteRef.current?.focus()
+    } else if (restoreDeleteFocusRef.current) {
+      restoreDeleteFocusRef.current = false
+      deleteTriggerRef.current?.focus()
+    }
+  }, [confirming, deleting])
+
   if (session?.isGuest) {
     return (
       <main className="profile-screen">
@@ -55,30 +80,6 @@ export function ProfilePage({ onAccountDeleted, onNavigate, onLogout }: ProfileP
     )
   }
 
-  const [editing, setEditing] = useState(false)
-  const [name, setName] = useState('')
-  const [vehicleType, setVehicleType] = useState<VehicleType | ''>('')
-  const [editError, setEditError] = useState('')
-  const [profileUpdated, setProfileUpdated] = useState(false)
-  const [saving, setSaving] = useState(false)
-  const [confirming, setConfirming] = useState(false)
-  const [deleteError, setDeleteError] = useState('')
-  const [deleting, setDeleting] = useState(false)
-  const deleteTriggerRef = useRef<HTMLButtonElement>(null)
-  const cancelDeleteRef = useRef<HTMLButtonElement>(null)
-  const confirmDeleteRef = useRef<HTMLButtonElement>(null)
-  const dialogRef = useRef<HTMLDivElement>(null)
-  const restoreDeleteFocusRef = useRef(false)
-
-  useEffect(() => {
-    if (confirming) {
-      if (deleting) dialogRef.current?.focus()
-      else cancelDeleteRef.current?.focus()
-    } else if (restoreDeleteFocusRef.current) {
-      restoreDeleteFocusRef.current = false
-      deleteTriggerRef.current?.focus()
-    }
-  }, [confirming, deleting])
 
   function startEditing() {
     if (!profile) return
@@ -174,11 +175,11 @@ export function ProfilePage({ onAccountDeleted, onNavigate, onLogout }: ProfileP
       <main className="auth-screen profile-screen">
     <section className="auth-panel profile-panel" aria-labelledby="profile-title" inert={confirming}>
       <div className="auth-mark" aria-hidden="true"><span>P</span><i /><i /><i /></div>
-      <p className="auth-eyebrow">SMART PARKING · YOUR ACCOUNT</p>
+      <p className="auth-eyebrow">SMART PARKING Â· YOUR ACCOUNT</p>
       <h1 id="profile-title">Your profile.</h1>
       <p className="auth-intro">Keep your details ready for the next space.</p>
 
-      {!profile ? loading ? <p className="profile-state" role="status">Loading your profile…</p>
+      {!profile ? loading ? <p className="profile-state" role="status">Loading your profileâ€¦</p>
         : error ? <div className="profile-state">
           <p className="auth-errors" role="alert">Could not load your profile. Try again.</p>
           <button className="profile-secondary" type="button" onClick={() => { setProfileUpdated(false); void loadProfile().catch(() => undefined) }}>Try again</button>
@@ -207,7 +208,7 @@ export function ProfilePage({ onAccountDeleted, onNavigate, onLogout }: ProfileP
             {profileUpdated && <p className="profile-success" role="status">Profile updated</p>}
             {editing ? <div className="profile-actions">
               <button className="profile-secondary" type="button" onClick={cancelEditing} disabled={saving}>Cancel</button>
-              <button className="auth-submit" type="submit" disabled={saving}>{saving ? 'Saving changes…' : 'Save changes'}</button>
+              <button className="auth-submit" type="submit" disabled={saving}>{saving ? 'Saving changesâ€¦' : 'Save changes'}</button>
             </div> : <button className="auth-submit" type="button" onClick={startEditing}>Edit profile</button>}
           </form>
 
@@ -226,7 +227,7 @@ export function ProfilePage({ onAccountDeleted, onNavigate, onLogout }: ProfileP
         {deleteError && <p className="auth-errors" role="alert">{deleteError}</p>}
         <form onSubmit={(event) => void confirmDeletion(event)}>
           <button ref={cancelDeleteRef} className="profile-secondary" type="button" onClick={closeConfirmation} disabled={deleting}>Cancel</button>
-          <button ref={confirmDeleteRef} className="profile-delete-confirm" type="submit" disabled={deleting}>{deleting ? 'Deleting account…' : 'Delete account'}</button>
+          <button ref={confirmDeleteRef} className="profile-delete-confirm" type="submit" disabled={deleting}>{deleting ? 'Deleting account\u2026' : 'Delete account'}</button>
         </form>
       </div>
     </div>}

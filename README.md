@@ -7,7 +7,7 @@ A mobile-first web application that helps users find nearby carparks, check real
 - Search for carparks near a destination
 - Real-time carpark availability with alerts
 - Turn-by-turn driving and walking navigation with live route simulation
-- Carpark recommendations based on availability, walking distance, and weather
+- Carpark recommendations based on availability, walking distance, driving distance, weather and historical data
 - Favourites and user profile management
 - EV and sheltered carpark filters
 

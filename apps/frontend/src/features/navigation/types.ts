@@ -1,9 +1,4 @@
-/**
- * Navigation & Routing Types (Owner: Xavier)
- * Aligned with docs/API_CONTRACT.md and @smart-parking/shared-types
- */
-
-import type { CarparkDetails } from '@smart-parking/shared-types';
+import type { CarparkDetails } from "@smart-parking/shared-types";
 
 export interface PlaceItem {
   placeId: string;
@@ -25,7 +20,7 @@ export interface RouteInfo {
   summary: string;
   durationMinutes: number;
   distanceKm: number;
-  traffic: 'Light' | 'Moderate' | 'Heavy';
+  traffic: "Light" | "Moderate" | "Heavy";
   path: google.maps.LatLng[] | { lat: number; lng: number }[];
 }
 
@@ -35,13 +30,13 @@ export interface WalkingInfo {
   path: google.maps.LatLng[] | { lat: number; lng: number }[];
 }
 
-
 export interface NavigationPageProps {
   onBack?: () => void;
   initialCarparkNo?: string | null;
   initialCarparkDetails?: CarparkDetails | null;
-  onNavigate?: (page: 'search' | 'favourites' | 'profile' | 'navigation') => void;
+  onNavigate?: (
+    page: "search" | "favourites" | "profile" | "navigation",
+  ) => void;
   onLogout?: () => void;
   isGuest?: boolean;
 }
-

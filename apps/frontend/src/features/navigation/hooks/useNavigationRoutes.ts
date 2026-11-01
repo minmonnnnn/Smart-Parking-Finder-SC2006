@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import type { RouteInfo, WalkingInfo } from '../types';
 import { calculateDistanceKm } from '../constants';
 
@@ -22,11 +22,10 @@ export function useNavigationRoutes({
   const [walkingInfo, setWalkingInfo] = useState<WalkingInfo | null>(null);
   const [isCalculatingRoute, setIsCalculatingRoute] = useState(false);
 
+  const isValid = Boolean(enabled && carpark && destination);
+
   useEffect(() => {
     if (!enabled || !carpark || !destination) {
-      setDrivingRoutes([]);
-      setWalkingInfo(null);
-      setIsCalculatingRoute(false);
       return;
     }
 
@@ -163,11 +162,11 @@ export function useNavigationRoutes({
   ]);
 
   return {
-    drivingRoutes,
+    drivingRoutes: isValid ? drivingRoutes : [],
     activeRouteIndex,
     setActiveRouteIndex,
-    activeDrivingRoute: drivingRoutes[activeRouteIndex] || drivingRoutes[0] || null,
-    walkingInfo,
-    isCalculatingRoute,
+    activeDrivingRoute: isValid ? (drivingRoutes[activeRouteIndex] || drivingRoutes[0] || null) : null,
+    walkingInfo: isValid ? walkingInfo : null,
+    isCalculatingRoute: isValid ? isCalculatingRoute : false,
   };
 }

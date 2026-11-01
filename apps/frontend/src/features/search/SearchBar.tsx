@@ -1,4 +1,4 @@
-import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from 'react';
+﻿import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from 'react';
 import { vars } from '../../components';
 import { CrosshairIcon, MapPinIcon } from '../../components/icons';
 import type { PlaceItem } from '../navigation/types';
@@ -152,7 +152,7 @@ function DropdownItem({
                 fontWeight: 700,
               }}
             >
-              ✓
+              âœ“
             </span>
           )}
         </span>
@@ -234,8 +234,6 @@ export function SearchBar({
   onEvFilter,
   shelteredFilter,
   onShelteredFilter,
-  pricingAsc,
-  onPricingAsc,
   availabilityDesc,
   onAvailabilityDesc,
   onClearFilters,
@@ -349,7 +347,7 @@ export function SearchBar({
               alignItems: 'center',
             }}
           >
-            ✕
+            âœ•
           </button>
         ) : null}
         <div
@@ -491,7 +489,7 @@ export function SearchBar({
         </div>
       )}
 
-      {/* Filter chip panel — space-between across full width */}
+      {/* Filter chip panel â€” space-between across full width */}
       {filtersOpen && (
         <div
           style={{
@@ -584,7 +582,7 @@ export function SearchBar({
         </div>
       )}
 
-      {/* Clear Filters — shown below chips when any filter is active */}
+      {/* Clear Filters â€” shown below chips when any filter is active */}
       {filtersOpen &&
         (evFilter !== null ||
           shelteredFilter !== null ||

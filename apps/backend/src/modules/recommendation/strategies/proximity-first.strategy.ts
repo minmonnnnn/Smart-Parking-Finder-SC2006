@@ -1,19 +1,16 @@
 import type {
   RecommendationInput,
   RecommendationResult,
-} from '@smart-parking/shared-types';
-import type { IRankingStrategy } from './ranking-strategy.interface.js';
+} from "@smart-parking/shared-types";
+import type { IRankingStrategy } from "./ranking-strategy.interface.js";
 import {
   MAX_ACCEPTABLE_WALKING_DISTANCE_METERS,
   SHELTERED_RAIN_SCORE_MULTIPLIER,
-} from './balanced-ranking.strategy.js';
+} from "./balanced-ranking.strategy.js";
 
-/**
- * Strategy prioritizing minimum walking distance over availability lot abundance (80% walk, 20% availability).
- * Designed for drivers carrying luggage, families with small children, or those with mobility concerns.
- */
+//Strategy prioritising minimum walking distance (80% walk, 20% availability).
 export class ProximityFirstStrategy implements IRankingStrategy {
-  readonly strategyName = 'ProximityFirst';
+  readonly strategyName = "ProximityFirst";
 
   calculateScore(input: RecommendationInput): RecommendationResult {
     const {
@@ -27,7 +24,7 @@ export class ProximityFirstStrategy implements IRankingStrategy {
 
     if (realTimeAvailabilityRatio === null) {
       throw new TypeError(
-        'realTimeAvailabilityRatio is required to calculate a recommendation score',
+        "realTimeAvailabilityRatio is required to calculate a recommendation score",
       );
     }
 
@@ -53,4 +50,3 @@ export class ProximityFirstStrategy implements IRankingStrategy {
     return { availabilityScore, walkingScore, baseScore, finalScore };
   }
 }
-

@@ -1,20 +1,16 @@
 import type {
   RecommendationInput,
   RecommendationResult,
-} from '@smart-parking/shared-types';
-import type { IRankingStrategy } from './ranking-strategy.interface.js';
+} from "@smart-parking/shared-types";
+import type { IRankingStrategy } from "./ranking-strategy.interface.js";
 import {
   MAX_ACCEPTABLE_WALKING_DISTANCE_METERS,
   SHELTERED_RAIN_SCORE_MULTIPLIER,
-} from './balanced-ranking.strategy.js';
+} from "./balanced-ranking.strategy.js";
 
-/**
- * Strategy prioritizing maximum parking lot availability (85% availability, 15% walk).
- * Recommended during peak rush hours, festive seasons, or heavily congested commercial zones
- * where securing an available parking lot is the primary concern.
- */
+//Strategy prioritising maximum parking lot availability (85% availability, 15% walk).
 export class MaxAvailabilityStrategy implements IRankingStrategy {
-  readonly strategyName = 'MaxAvailability';
+  readonly strategyName = "MaxAvailability";
 
   calculateScore(input: RecommendationInput): RecommendationResult {
     const {
@@ -28,7 +24,7 @@ export class MaxAvailabilityStrategy implements IRankingStrategy {
 
     if (realTimeAvailabilityRatio === null) {
       throw new TypeError(
-        'realTimeAvailabilityRatio is required to calculate a recommendation score',
+        "realTimeAvailabilityRatio is required to calculate a recommendation score",
       );
     }
 
@@ -54,4 +50,3 @@ export class MaxAvailabilityStrategy implements IRankingStrategy {
     return { availabilityScore, walkingScore, baseScore, finalScore };
   }
 }
-
